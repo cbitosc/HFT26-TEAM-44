@@ -94,8 +94,11 @@ def test_seeded_pages_show_real_values(live, browser):
     page.wait_for_function("document.body.innerText.includes('Coyote')", timeout=10000)
     assert "{{" not in page.inner_text("body")
     page.goto(base + "/Accuracy.dc.html")
-    page.wait_for_function("document.body.innerText.includes('62.9%')", timeout=10000)
-    assert "Not measured" in page.inner_text("body")                 # unmeasured metrics say so
+    page.wait_for_function("document.body.innerText.includes('62.8%')", timeout=10000)
+    body = page.inner_text("body")
+    assert "78.9%" in body and "26.8%" in body and "59.4%" in body       # every measured number from metrics.json is on the page
+    assert "62.9%" not in body                                           # the superseded mixed-split score is gone
+    assert "Not measured" in body                 # unmeasured metrics say so
     assert not errors, errors
     page.close()
 

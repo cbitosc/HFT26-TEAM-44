@@ -1,17 +1,56 @@
 {
-  "source": "Hackathon run, 30 Oct 2026 (evaluate.py and train_probe.py in D:\\hackathon)",
-  "accuracy_label": "CCT20 test",
-  "species_accuracy": 0.629,
+  "source": "Hackathon runs, 30-31 Oct 2026 (evaluate.py, train_probe.py, tune_probe.py in D:\\hackathon)",
+  "accuracy_label": "CCT20 trans_test (new camera locations)",
+  "species_accuracy": 0.628,
   "models": [
-    {"name": "BioCLIP zero-shot", "kind": "Zero-shot, class names only",
-     "metric_label": "Accuracy (2,318 CCT20 images)", "metric": 0.268, "check": null, "verdict": "NOT RUN"},
-    {"name": "Linear probe on BioCLIP", "kind": "Trained on CCT20 train crops",
-     "metric_label": "Accuracy (1,717 CCT20 test images)", "metric": 0.629, "check": null, "verdict": "NOT RUN"},
-    {"name": "SpeciesNet", "kind": "Pretrained, global",
-     "metric_label": "Accuracy", "metric": null, "check": null, "verdict": "NOT RUN"}
+    {
+      "name": "BioCLIP zero-shot",
+      "kind": "Zero-shot, class names only",
+      "metric_label": "Accuracy (2,318 CCT20 images)",
+      "metric": 0.268,
+      "check": null,
+      "verdict": "NOT RUN"
+    },
+    {
+      "name": "Linear probe on BioCLIP (C=10)",
+      "kind": "Trained on CCT20 train crops, tuned on validation",
+      "metric_label": "Accuracy, NEW cameras (928 trans_test images)",
+      "metric": 0.628,
+      "check": null,
+      "verdict": "NOT RUN"
+    },
+    {
+      "name": "Linear probe on BioCLIP (C=10)",
+      "kind": "Same model, cameras seen in training",
+      "metric_label": "Accuracy, KNOWN cameras (615 cis_test images)",
+      "metric": 0.789,
+      "check": null,
+      "verdict": "NOT RUN"
+    },
+    {
+      "name": "Probe on greyscale crops",
+      "kind": "Experiment, rejected",
+      "metric_label": "Accuracy, NEW cameras (928 trans_test images)",
+      "metric": 0.594,
+      "check": null,
+      "verdict": "NOT RUN"
+    },
+    {
+      "name": "SpeciesNet",
+      "kind": "Pretrained, global",
+      "metric_label": "Accuracy",
+      "metric": null,
+      "check": null,
+      "verdict": "NOT RUN"
+    }
   ],
-  "splits": {"Train images": 11518, "Test images": 1717},
-  "integrity_note": "The probe was trained only on CCT20 train-split crops and scored on the other CCT20 splits (cis and trans val/test together). Cis and trans were not scored separately, and the empty-frame filter, day vs night and count error have not been measured.",
+  "splits": {
+    "Train images": 11518,
+    "Validation images": 174,
+    "Test: known cameras (cis)": 615,
+    "Test: new cameras (trans)": 928
+  },
+  "integrity_note": "C was chosen on the validation splits only; the probe never saw a test image. Accuracy is per frame. On new cameras the model scores 62.8% (63.1% with voting across a burst) versus 78.9% on known cameras, so it loses about 16 points at an unseen location. Small classes (bird 3, rodent 1 on trans_test) are too few to judge. Day vs night, the empty-frame filter and count error have not been measured.",
   "tests": null,
   "check_note": "No single-image check has been recorded."
 }

@@ -9,7 +9,9 @@ python -m megadetector.detection.run_detector_batch MDV5A cct_subset cct_output.
 python -m megadetector.detection.run_detector_batch MDV5A cct_train  train_output.json
 python classify.py cct_output.json cct_species.json    # zero-shot BioCLIP baseline
 python evaluate.py                                      # baseline accuracy: 26.8%
-python train_probe.py                                   # trains the linear probe -> species_probe.pkl, accuracy 62.9%
+python train_probe.py                                   # first probe -> species_probe.pkl (62.9% on all non-train splits mixed)
+python tune_probe.py                                    # tuned probe + honest cis/trans report -> species_probe_tuned.pkl (62.8% new cameras)
+python tune_probe.py gray                               # greyscale experiment (worse; rejected)
 ```
 `species_probe.pkl` is what the dashboard backend (`src/backend/pipeline.py`) loads; its path is set in `src/config.yaml`.
 Copies of the scripts as written during the hackathon; they were not changed to run from this folder.

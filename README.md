@@ -40,8 +40,8 @@ dashboard still works.
 * Set `FEATHERLESS_API_KEY` for LLM-written messages; otherwise messages are template text and the page says so.
 
 ## Results (honest)
-Species accuracy on CCT20: **26.8%** zero-shot BioCLIP, **62.9%** with the trained probe (1,717 test images).
-Cis vs trans, day vs night, empty-frame filter and count error are **not measured yet** and the dashboard shows "Not measured".
+Species accuracy on CCT20: **26.8%** zero-shot BioCLIP; with the trained probe **78.9%** on camera locations seen in training and **62.8%** on new locations (the realistic number).
+Day vs night, empty-frame filter and count error are **not measured yet** and the dashboard shows "Not measured".
 Details: [docs/EVALUATION.md](docs/EVALUATION.md).
 
 ## Tests
