@@ -1,0 +1,102 @@
+# WildWatch live dashboard - every number on the dashboard comes from the DB, reports/ or this file.
+paths:
+  incoming: data/incoming
+  db: data/wildwatch.db
+  reports: reports
+  frontend: frontend
+
+pipeline:
+  detector: MDV5A                  # megadetector package model name
+  detector_label: "MegaDetector v5a"
+  detect_conf: 0.30                # boxes at/above this count as animals
+  empty_below: 0.05                # frame is discarded as empty ONLY if the best box is below this
+  # frames whose best box is between empty_below and detect_conf go to the REVIEW queue
+  # (species vote + count of at least 1, so a faint leopard still raises an alert)
+  classifier_label: "BioCLIP + linear probe"
+  bioclip: "hf-hub:imageomics/bioclip"
+  species_probe: "D:/hackathon/species_probe.pkl"   # made by train_probe.py in the hackathon folder
+  device: auto                     # auto -> cuda if available
+  warmup: true                     # load models when the server starts
+  max_upload_mb: 25
+  max_files_per_request: 20        # one request may carry at most this many files
+  max_queue: 200                   # uploads are refused (HTTP 429) while this many jobs are waiting
+  max_pixels: 60000000
+  burst_seconds: 60                # frames from one camera within this gap form one burst
+
+watcher:
+  enabled: true
+  interval_seconds: 2
+
+llm:
+  # Set FEATHERLESS_API_KEY in the environment to get LLM-written alert messages.
+  # Without a key every message is template text and the dashboard says so.
+  endpoint: "https://api.featherless.ai/v1/chat/completions"
+  model: "Qwen/Qwen2.5-7B-Instruct"
+  timeout_seconds: 8
+
+risk:
+  night_factor: 1.5
+  levels: {CRITICAL: 3.0, HIGH: 1.5, MEDIUM: 0.5}      # score >= value
+  response:
+    CRITICAL: "6 rangers, vehicle and village warning"
+    HIGH: "4 rangers with a vehicle"
+    MEDIUM: "2 rangers on foot, no vehicle"
+    LOW: "Monitor only, no team needed"
+  default_species_weight: 0.2
+  species_weight:
+    person: 1.0
+    "mountain lion": 0.9
+    leopard: 0.9
+    tiger: 1.0
+    elephant: 0.9
+    bobcat: 0.7
+    coyote: 0.6
+    badger: 0.3
+    deer: 0.3
+    dog: 0.3
+    fox: 0.3
+    raccoon: 0.2
+    skunk: 0.15
+    opossum: 0.1
+    cat: 0.1
+    rabbit: 0.05
+    squirrel: 0.05
+    rodent: 0.03
+    bird: 0.03
+
+# Fictional layout for the camera map (positions are % of the map box).
+cameras:
+  - {id: "46",  name: "Rampur edge",     village: "Rampur",        zone: 1.0, x: "50%", y: "28%"}
+  - {id: "61",  name: "Hillside",        village: "Hillside",      zone: 1.3, x: "34%", y: "18%"}
+  - {id: "120", name: "Kondapur farms",  village: "Kondapur",      zone: 1.2, x: "52%", y: "74%"}
+  - {id: "38",  name: "Deep reserve",    village: "Deep reserve",  zone: 0.8, x: "18%", y: "40%"}
+  - {id: "7",   name: "Reserve trail",   village: "Reserve trail", zone: 0.5, x: "30%", y: "68%"}
+  - {id: "90",  name: "Hillside ridge",  village: "Hillside",      zone: 1.5, x: "10%", y: "78%"}
+villages:
+  - {name: "Rampur",   x: "72%", y: "24%"}
+  - {name: "Kondapur", x: "64%", y: "70%"}
+  - {name: "Hillside", x: "84%", y: "50%"}
+
+# Official census figures only.
+rare_species:
+  - key: tiger
+    name: "Bengal tiger"
+    sci: "Panthera tigris"
+    status: ENDANGERED
+    count: 3682
+    source: "All India Tiger Estimation, 2022"
+    match: [tiger]
+  - key: elephant
+    name: "Asian elephant"
+    sci: "Elephas maximus"
+    status: ENDANGERED
+    count: 22446
+    source: "First DNA-based elephant census, 2025"
+    match: [elephant]
+  - key: leopard
+    name: "Indian leopard"
+    sci: "Panthera pardus fusca"
+    status: VULNERABLE
+    count: 13874
+    source: "Status of Leopards in India, 2022"
+    match: [leopard]

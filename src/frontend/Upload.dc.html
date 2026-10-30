@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>WildWatch upload</title>
+<script src="api.js"></script>
+<script src="wildwatch-runtime.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07110D}
+a{color:#F2A93B}a:hover{color:#FFC56B}
+@keyframes live{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes ants{to{background-position:40px 0,-40px 100%,0 -40px,100% 40px}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(242,169,59,.6)}70%{box-shadow:0 0 0 10px rgba(242,169,59,0)}100%{box-shadow:0 0 0 0 rgba(242,169,59,0)}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes drift{0%{transform:translate(0,0);opacity:0}15%{opacity:.95}50%{transform:translate(26px,-38px);opacity:.45}85%{opacity:.9}100%{transform:translate(-14px,-76px);opacity:0}}
+@keyframes aurora{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(140px,50px) scale(1.2)}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes moon{0%,100%{box-shadow:0 0 50px 14px rgba(244,239,216,.22)}50%{box-shadow:0 0 80px 26px rgba(244,239,216,.32)}}
+button,.btn{transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}
+button:hover,.btn:hover{transform:translateY(-2px);filter:brightness(1.1);box-shadow:0 8px 18px rgba(0,0,0,.4)}
+button:active,.btn:active{transform:translateY(0) scale(.96)}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #F2A93B;outline-offset:2px}
+nav a{transition:background .2s ease,color .2s ease,padding-left .2s ease}
+nav a:hover{background:#1A2B25;color:#E8EFEA;padding-left:18px}
+.drop{transition:background .2s ease,transform .2s ease;background-image:linear-gradient(90deg,#F2A93B 50%,transparent 50%),linear-gradient(90deg,#F2A93B 50%,transparent 50%),linear-gradient(0deg,#F2A93B 50%,transparent 50%),linear-gradient(0deg,#F2A93B 50%,transparent 50%);background-repeat:repeat-x,repeat-x,repeat-y,repeat-y;background-size:20px 2px,20px 2px,2px 20px,2px 20px;background-position:0 0,0 100%,0 0,100% 0}
+.drop:hover{transform:scale(1.01)}
+.drop:focus-within{outline:2px solid #F2A93B;outline-offset:3px}
+.fly{position:absolute;border-radius:50%;background:#F7E27A;box-shadow:0 0 10px 3px rgba(247,226,122,.55);opacity:.75}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.3}
+.shine{background:linear-gradient(90deg,#E8EFEA 40%,#FFD58A 50%,#E8EFEA 60%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+@media (prefers-reduced-motion:no-preference){
+.fly{animation:drift var(--d,9s) ease-in-out infinite}
+.blob{animation:aurora 20s ease-in-out infinite}
+.shine{animation:shimmer 7s linear infinite}
+.moon{animation:moon 5s ease-in-out infinite}
+.live{animation:live 1.6s ease-in-out infinite}
+.rise{animation:rise .5s ease both}
+.drop{animation:ants 1.2s linear infinite}
+.bob{animation:bob 2.4s ease-in-out infinite}
+.active{animation:pulse 1.2s ease-out infinite}
+.pop{animation:pop .45s cubic-bezier(.2,.8,.2,1.3) both}
+}
+</style>
+</helmet>
+<div style="position: relative; overflow: hidden; min-height: 100vh; background: #07110D; color: #E8EFEA; font-family: Inter, system-ui, sans-serif; display: flex; flex-wrap: wrap; align-items: stretch">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden">
+<div style="position: absolute; left: 0; top: 0; width: 100%; height: 300px; background: linear-gradient(180deg, #14302A 0%, #0C1F19 60%, #07110D 100%)"></div>
+<div class="blob" style="left: 10%; top: -120px; width: 520px; height: 320px; background: #2BB48A"></div>
+<div class="blob" style="left: 55%; top: -80px; width: 460px; height: 280px; background: #5B6CFF; animation-delay: -8s"></div>
+<div class="moon" style="position: absolute; right: 8%; top: 46px; width: 64px; height: 64px; border-radius: 50%; background: #F4EFD8; box-shadow: 0 0 60px 18px rgba(244,239,216,.25)"></div>
+<svg viewBox="0 0 1440 300" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 300px">
+<path ww-d="{{treesFar}}" fill="#0E241C"></path>
+<path ww-d="{{treesNear}}" fill="#07110D"></path>
+</svg>
+<sc-for list="{{flies}}" as="f" hint-placeholder-count="0">
+<div class="fly" style="left: {{f.x}}; top: {{f.y}}; width: {{f.s}}; height: {{f.s}}; --d: {{f.d}}; animation-delay: {{f.delay}}"></div>
+</sc-for>
+</div>
+
+<nav aria-label="Main" style="position: relative; z-index: 1; flex: 1 1 220px; max-width: 100%; background: rgba(8,19,15,0.72); backdrop-filter: blur(12px); border-right: 1px solid #22342D; padding: 24px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+<div style="width: 36px; height: 36px; border-radius: 10px; background: #F2A93B; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1814" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path></svg>
+</div>
+<div style="display: flex; flex-direction: column">
+<span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; letter-spacing: -0.01em">WildWatch</span>
+<span style="font-size: 12px; color: #9DB0A6">Forest division console</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<a href="Main.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Home</a>
+<a href="Upload.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; background: #1D2F28; color: #E8EFEA; text-decoration: none; font-size: 14px; font-weight: 500">Upload</a>
+<a href="Alerts.dc.html" style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Alerts <span style="background: #FF6B5B; color: #2A0D09; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px">{{alertCount}}</span></a>
+<a href="Analytics.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Analytics</a>
+<a href="Accuracy.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Model accuracy</a>
+</div>
+<div style="margin-top: auto; background: #172822; border: 1px solid #22342D; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #9DB0A6">Pipeline</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span class="live" style="width: 8px; height: 8px; border-radius: 4px; background: {{pipeColor}}"></span>{{pipeText}}</span>
+<span style="font-size: 12px; color: #9DB0A6">{{lastImage}}</span>
+</div>
+</nav>
+
+<main class="{{mainCls}}" style="position: relative; z-index: 1; flex: 999 1 560px; min-width: 0; padding: 28px 32px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px">
+<sc-if value="{{apiDown}}"><div role="alert" style="background: rgba(52,18,14,0.9); border: 1px solid #7A3329; color: #FBE3DE; border-radius: 12px; padding: 14px 18px; font-size: 14px">Cannot reach the WildWatch server ({{apiError}}). Check that run.ps1 dashboard is still running. Retrying every 10 seconds.</div></sc-if>
+
+<header style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; color: #B9C8C0">Add new camera-trap photos</span>
+<h1 class="shine" style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 40px; font-weight: 600; letter-spacing: -0.02em">Upload photos</h1>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+
+<section class="rise" aria-label="Upload form" style="flex: 1 1 400px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 18px">
+
+<label class="drop" onDragOver="{{over}}" onDragLeave="{{leave}}" onDrop="{{drop}}" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 240px; padding: 24px; border-radius: 14px; background-color: {{dropBg}}; cursor: pointer; text-align: center">
+<input type="file" accept="image/*" multiple onChange="{{onFiles}}" style="position: absolute; width: 1px; height: 1px; opacity: 0">
+<div class="bob" style="width: 64px; height: 64px; border-radius: 16px; background: #F2A93B; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1E1405" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"></path><path d="M6 10l6-6 6 6"></path><path d="M4 20h16"></path></svg>
+</div>
+<span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600">{{dropTitle}}</span>
+<span style="font-size: 14px; color: #B9C8C0">or click to choose files · JPG or PNG · many at once</span>
+</label>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="cam" style="font-size: 13px; color: #B9C8C0">Camera</label>
+<select id="cam" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid #2E453C; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<sc-for list="{{camOptions}}" as="o" hint-placeholder-count="6"><option value="{{o.id}}">{{o.label}}</option></sc-for>
+</select>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="when" style="font-size: 13px; color: #B9C8C0">Capture time</label>
+<input id="when" type="datetime-local" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid #2E453C; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif; color-scheme: dark">
+</div>
+</div>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; color: #C9D6CF; cursor: pointer">
+<input id="exif" type="checkbox" checked style="width: 18px; height: 18px; accent-color: #F2A93B">
+Use the time stored in the photo when it has one
+</label>
+
+<div style="display: flex; gap: 12px; align-items: flex-start; background: #13221C; border: 1px solid #24392F; border-radius: 10px; padding: 12px 14px">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8FBFA6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px"><path d="M3 7h6l2 2h10v10H3z"></path></svg>
+<span style="font-size: 13px; line-height: 1.5; color: #B9C8C0">Cameras can also save straight into the <span style="font-family: 'JetBrains Mono', monospace; color: #E8EFEA">data/incoming/</span> folder. WildWatch picks new files up on its own.</span>
+</div>
+</section>
+
+<section class="rise" aria-label="Processing queue" style="flex: 1 1 460px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Processing queue</h2>
+<span style="font-size: 12px; color: #9DB0A6">{{queueLabel}}</span>
+</div>
+
+<sc-if value="{{noItems}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px 16px; text-align: center">
+<span style="font-size: 15px; color: #C9D6CF">Nothing uploaded yet</span>
+<span style="font-size: 13px; color: #9DB0A6">Photos you add, and files cameras drop into data/incoming/, appear here and move through each step.</span>
+
+</div>
+</sc-if>
+
+<sc-for list="{{items}}" as="it" hint-placeholder-count="0">
+<div class="rise" style="background: #1A2B25; border: 1px solid #24392F; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; gap: 12px; align-items: center">
+<sc-if value="{{it.hasUrl}}" hint-placeholder-val="{{ false }}">
+<img ww-src="{{it.url}}" alt="{{it.name}}" style="width: 72px; height: 54px; object-fit: cover; border-radius: 8px; flex: none">
+</sc-if>
+<sc-if value="{{it.noUrl}}" hint-placeholder-val="{{ true }}">
+<div style="width: 72px; height: 54px; border-radius: 8px; background: #0B1612; border: 1px solid #24392F; display: flex; align-items: center; justify-content: center; flex: none; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6F8A7E">IR</div>
+</sc-if>
+<div style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1">
+<span style="font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{it.name}}</span>
+<span style="font-size: 12px; color: #9DB0A6">{{it.sizeText}} · {{it.stepText}}</span>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{it.steps}}" as="s" hint-placeholder-count="5">
+<div class="{{s.cls}}" style="display: flex; align-items: center; justify-content: center; min-height: 30px; border-radius: 8px; font-size: 12px; font-weight: 500; background: {{s.bg}}; color: {{s.fg}}">{{s.label}}</div>
+</sc-for>
+</div>
+<sc-if value="{{it.isError}}" hint-placeholder-val="{{ false }}">
+<div style="background: rgba(52,18,14,0.8); border: 1px solid #7A3329; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #FBE3DE">{{it.error}}</div>
+</sc-if>
+<sc-if value="{{it.done}}" hint-placeholder-val="{{ false }}">
+<div class="pop" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: #13221C; border-radius: 10px; padding: 10px 12px">
+<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px">
+<span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: {{it.bg}}; color: {{it.fg}}">{{it.level}}</span>
+{{it.result}}
+</span>
+<sc-if value="{{it.hasAlert}}"><a class="btn" href="{{it.alertHref}}" style="display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #2E453C; color: #E8EFEA; text-decoration: none; font-size: 13px">View alert</a></sc-if>
+</div>
+<span style="font-size: 11px; color: #8A9E94">{{it.note}}</span>
+</sc-if>
+</div>
+</sc-for>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { dragging: false, data: {}, loaded: false, errs: {}, localErrors: [], thumbs: {}, busy: false };
+    this.errId = 1;
+  }
+  componentDidMount() {
+    var self = this;
+    WW.load(this, { summary: { url: '/api/summary', every: 10000 }, cameras: { url: '/api/cameras' }, jobs: { url: '/api/jobs?limit=20', every: 10000 } });
+    this.fast = setInterval(function () {                    // 1 s polling of every running job
+      var list = ((self.state.data || {}).jobs || {}).jobs || [];
+      list.filter(function (j) { return j.state === 'queued' || j.state === 'running'; }).forEach(function (j) {
+        WW.api('/api/jobs/' + j.id).then(function (nj) {
+          self.setState(function (st) {
+            var d = Object.assign({}, st.data), arr = (d.jobs ? d.jobs.jobs : []).map(function (x) { return x.id === nj.id ? nj : x; });
+            d.jobs = { jobs: arr };
+            return { data: d };
+          });
+          if (nj.state === 'done' || nj.state === 'error') WW.refresh(self, 'summary');
+        }).catch(function () {});
+      });
+    }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this.fast); WW.stop(this); }
+  send(files) {
+    var self = this;
+    if (!files || !files.length) { this.setState({ dragging: false }); return; }
+    var fd = new FormData();
+    var urls = [];
+    for (var i = 0; i < files.length; i++) { fd.append('files', files[i]); urls.push({ name: files[i].name, url: URL.createObjectURL(files[i]) }); }
+    var cam = document.getElementById('cam'), when = document.getElementById('when'), ex = document.getElementById('exif');
+    fd.append('camera_id', cam ? cam.value : '');
+    fd.append('capture_time', when ? when.value : '');
+    fd.append('use_exif', ex && ex.checked ? 'true' : 'false');
+    this.setState({ dragging: false, busy: true });
+    function addErrors(list) {
+      self.setState(function (st) {
+        var add = list.map(function (r) { return { id: 'e' + (self.errId++), filename: r.filename || 'Upload', error: r.error }; });
+        return { localErrors: add.concat(st.localErrors).slice(0, 5), busy: false };
+      });
+    }
+    WW.api('/api/upload', { method: 'POST', body: fd }).then(function (r) {
+      self.setState(function (st) {
+        var th = Object.assign({}, st.thumbs);
+        r.jobs.forEach(function (j) { var u = urls.filter(function (x) { return x.name === j.filename; })[0]; if (u) th[j.id] = u.url; });
+        return { thumbs: th, busy: false };
+      });
+      if (r.rejected && r.rejected.length) addErrors(r.rejected);
+      WW.refresh(self, 'jobs');
+    }).catch(function (e) {
+      var rej = e.body && e.body.rejected && e.body.rejected.length ? e.body.rejected : [{ filename: 'Upload', error: e.message }];
+      addErrors(rej);
+    });
+  }
+  renderVals() {
+    var self = this;
+    var st = this.state || { dragging: false, data: {}, localErrors: [], thumbs: {} };
+    var D = st.data || {};
+    var seed = 41;
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    function trees(base, minH, maxH, step) {
+      var d = 'M0 300 L0 ' + base;
+      for (var x = 0; x <= 1440; x += step) {
+        var h = minH + rnd() * (maxH - minH);
+        d += ' L' + (x + step / 2) + ' ' + Math.round(base - h) + ' L' + (x + step) + ' ' + base;
+      }
+      return d + ' L1440 300 Z';
+    }
+    var treesFar = trees(250, 40, 110, 34);
+    var treesNear = trees(285, 30, 90, 26);
+    var flies = [];
+    for (var i = 0; i < 24; i++) {
+      var s = 2 + Math.round(rnd() * 3);
+      flies.push({ x: Math.round(rnd() * 100) + '%', y: Math.round(rnd() * 1000) + 'px', s: s + 'px', d: (7 + rnd() * 8).toFixed(1) + 's', delay: (-rnd() * 12).toFixed(1) + 's' });
+    }
+
+    var LABELS = ['Upload', 'Detect', 'Species', 'Count', 'Risk'];
+    var STEP_TEXT = ['Uploading', 'Looking for animals', 'Identifying species', 'Counting the burst', 'Scoring risk', 'Done'];
+    function sizeText(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round((b || 0) / 1024)) + ' KB'; }
+    function pills(step, failed) {
+      return LABELS.map(function (l, j) {
+        var done = j < step, active = j === step;
+        if (failed && active) return { label: l, cls: '', bg: '#FF6B5B', fg: '#2A0D09' };
+        return { label: l, cls: active ? 'active' : '', bg: done ? '#5FD39A' : active ? '#F2A93B' : '#13221C', fg: done ? '#08291B' : active ? '#1E1405' : '#7F958A' };
+      });
+    }
+    var items = st.localErrors.map(function (e) {
+      return { id: e.id, name: e.filename, sizeText: 'Rejected', stepText: 'Not processed', hasUrl: false, noUrl: true, url: '', steps: pills(0, true),
+        isError: true, error: e.error, done: false };
+    });
+    var jobs = D.jobs ? D.jobs.jobs : [];
+    jobs.forEach(function (j) {
+      var r = j.result || {}, c, text = '', note = '';
+      var step = j.state === 'done' ? 5 : Math.min(j.stage_index, 5);
+      var failed = j.state === 'error';
+      if (r.outcome === 'empty') { c = WW.LV.EMPTY; text = 'No animal found · filtered out'; }
+      else if (r.species) {
+        c = WW.LV[r.level] || WW.LV.LOW;
+        text = r.count + ' ' + r.species_label + (r.review ? ' (faint)' : '') + ' · ' + r.village + ' · ' + (r.review ? 'needs a quick human check' : r.response);
+      } else { c = WW.LV.EMPTY; text = 'Done'; }
+      if (j.state === 'done') {
+        var bits = ['Real model output'];
+        if (r.top_conf != null) bits.push('detector ' + Math.round(r.top_conf * 100) + '%');
+        if (r.species_conf) bits.push('species ' + Math.round(r.species_conf * 100) + '%');
+        if (r.detector_ms != null) bits.push(Math.round(r.detector_ms + (r.classifier_ms || 0)) + ' ms' + (r.device ? ' on ' + r.device : ''));
+        note = bits.join(' · ');
+      }
+      var thumb = st.thumbs[j.id] || j.thumb_url;
+      var stepText = failed ? 'Failed' : j.state === 'queued' ? 'Waiting in queue' : STEP_TEXT[Math.min(step, 5)];
+      items.push({ id: j.id, name: j.filename, sizeText: sizeText(j.size) + (j.source === 'watcher' ? ' · camera drop' : ''), stepText: stepText,
+        hasUrl: true, noUrl: false, url: thumb, steps: pills(step, failed), isError: failed, error: j.error || '',
+        done: j.state === 'done', level: r.outcome === 'empty' ? 'EMPTY' : r.level || 'DONE', bg: c.bg, fg: c.fg, result: text,
+        alertHref: 'Alerts.dc.html?id=' + j.alert_id, hasAlert: !!j.alert_id, note: note });
+    });
+    var doneCount = items.filter(function (x) { return x.done; }).length;
+    var cams = D.cameras ? D.cameras.cameras : [];
+    var camOptions = cams.map(function (c) { return { id: c.id, label: 'Cam ' + c.id + ' · ' + c.name }; });
+    return Object.assign(WW.shell(st), { treesFar: treesFar, treesNear: treesNear, flies: flies, items: items, noItems: items.length === 0 && !!D.jobs,
+      queueLabel: items.length ? doneCount + ' of ' + items.length + ' done' : (D.jobs ? 'Empty' : 'Loading…'), camOptions: camOptions,
+      dropBg: st.dragging ? 'rgba(242,169,59,0.12)' : 'rgba(11,22,18,0.6)',
+      dropTitle: st.dragging ? 'Let go to upload' : st.busy ? 'Uploading…' : 'Drop camera photos here',
+      onFiles: function (e) { self.send(e.target.files || []); e.target.value = ''; },
+      over: function (e) { e.preventDefault(); if (!self.state.dragging) self.setState({ dragging: true }); },
+      leave: function () { self.setState({ dragging: false }); },
+      drop: function (e) { e.preventDefault(); self.send((e.dataTransfer && e.dataTransfer.files) || []); } });
+  }
+}
+</script>
+</body>
+</html>

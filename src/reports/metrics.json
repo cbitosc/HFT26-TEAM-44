@@ -1,0 +1,17 @@
+{
+  "source": "Hackathon run, 30 Oct 2026 (evaluate.py and train_probe.py in D:\\hackathon)",
+  "accuracy_label": "CCT20 test",
+  "species_accuracy": 0.629,
+  "models": [
+    {"name": "BioCLIP zero-shot", "kind": "Zero-shot, class names only",
+     "metric_label": "Accuracy (2,318 CCT20 images)", "metric": 0.268, "check": null, "verdict": "NOT RUN"},
+    {"name": "Linear probe on BioCLIP", "kind": "Trained on CCT20 train crops",
+     "metric_label": "Accuracy (1,717 CCT20 test images)", "metric": 0.629, "check": null, "verdict": "NOT RUN"},
+    {"name": "SpeciesNet", "kind": "Pretrained, global",
+     "metric_label": "Accuracy", "metric": null, "check": null, "verdict": "NOT RUN"}
+  ],
+  "splits": {"Train images": 11518, "Test images": 1717},
+  "integrity_note": "The probe was trained only on CCT20 train-split crops and scored on the other CCT20 splits (cis and trans val/test together). Cis and trans were not scored separately, and the empty-frame filter, day vs night and count error have not been measured.",
+  "tests": null,
+  "check_note": "No single-image check has been recorded."
+}
