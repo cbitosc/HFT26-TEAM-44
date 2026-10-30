@@ -3,7 +3,7 @@
 Camera traps produce thousands of photos, and rangers cannot open them all. WildWatch finds the animals, names the species,
 counts them, scores how dangerous the sighting is for the nearest village, and raises an alert with a recommended response.
 
-**Team:** [add team name and members]
+**Team Pentabytes:** Puram Harshith, Kurakula Sidhartha, Porandla Shiva Ganesh, Yanamanagandla Hruthik, Kottur Akhil Murthy
 
 ```
 .
@@ -58,7 +58,7 @@ restart persistence, browser pages) is real. See `tests/conftest.py`.
 * The frontend loads its fonts from Google Fonts when online.
 
 ## License
-MIT, see [LICENSE](LICENSE). Replace the copyright line with your name or team.
+MIT, see [LICENSE](LICENSE). Copyright 2026 Team Pentabytes.
 
 
 ## Security
