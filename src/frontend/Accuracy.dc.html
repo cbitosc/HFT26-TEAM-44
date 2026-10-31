@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>WildWatch model accuracy</title>
+<script src="api.js"></script>
+<script src="wildwatch-runtime.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07110D}
+a{color:#F2A93B}a:hover{color:#FFC56B}
+@keyframes live{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes drift{0%{transform:translate(0,0);opacity:0}15%{opacity:.95}50%{transform:translate(26px,-38px);opacity:.45}85%{opacity:.9}100%{transform:translate(-14px,-76px);opacity:0}}
+@keyframes aurora{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(140px,50px) scale(1.2)}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes moon{0%,100%{box-shadow:0 0 50px 14px rgba(244,239,216,.22)}50%{box-shadow:0 0 80px 26px rgba(244,239,216,.32)}}
+@keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+button:focus-visible,a:focus-visible{outline:2px solid #F2A93B;outline-offset:2px}
+nav a{transition:background .2s ease,color .2s ease,padding-left .2s ease}
+nav a:hover{background:#1A2B25;color:#E8EFEA;padding-left:18px}
+main section{transition:border-color .25s ease}
+main section:hover{border-color:#3A564B}
+.lift{transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.lift:hover{transform:translateY(-5px);border-color:#3F6B5A;box-shadow:0 14px 30px rgba(0,0,0,.5)}
+.fly{position:absolute;border-radius:50%;background:#F7E27A;box-shadow:0 0 10px 3px rgba(247,226,122,.55);opacity:.75}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.3}
+.shine{background:linear-gradient(90deg,#E8EFEA 40%,#FFD58A 50%,#E8EFEA 60%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+.skel{background:linear-gradient(90deg,#1C2E27 25%,#2A4239 50%,#1C2E27 75%);background-size:200% 100%}
+@media (prefers-reduced-motion:no-preference){
+.fly{animation:drift var(--d,9s) ease-in-out infinite}
+.blob{animation:aurora 20s ease-in-out infinite}
+.shine{animation:shimmer 7s linear infinite}
+.moon{animation:moon 5s ease-in-out infinite}
+.live{animation:live 1.6s ease-in-out infinite}
+.rise{animation:rise .6s ease both}
+.skel{animation:skel 1.6s linear infinite}
+.pop{animation:pop .5s cubic-bezier(.2,.8,.2,1.3) both}
+}
+</style>
+</helmet>
+<div style="position: relative; overflow: hidden; min-height: 100vh; background: #07110D; color: #E8EFEA; font-family: Inter, system-ui, sans-serif; display: flex; flex-wrap: wrap; align-items: stretch">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden">
+<div style="position: absolute; left: 0; top: 0; width: 100%; height: 300px; background: linear-gradient(180deg, #14302A 0%, #0C1F19 60%, #07110D 100%)"></div>
+<div class="blob" style="left: 10%; top: -120px; width: 520px; height: 320px; background: #2BB48A"></div>
+<div class="blob" style="left: 55%; top: -80px; width: 460px; height: 280px; background: #5B6CFF; animation-delay: -8s"></div>
+<div class="blob" style="left: 30%; top: 900px; width: 600px; height: 400px; background: #1E7A5C; animation-delay: -4s"></div>
+<div class="moon" style="position: absolute; right: 8%; top: 46px; width: 64px; height: 64px; border-radius: 50%; background: #F4EFD8; box-shadow: 0 0 60px 18px rgba(244,239,216,.25)"></div>
+<svg viewBox="0 0 1440 300" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 300px">
+<path ww-d="{{treesFar}}" fill="#0E241C"></path>
+<path ww-d="{{treesNear}}" fill="#07110D"></path>
+</svg>
+<sc-for list="{{flies}}" as="f" hint-placeholder-count="0">
+<div class="fly" style="left: {{f.x}}; top: {{f.y}}; width: {{f.s}}; height: {{f.s}}; --d: {{f.d}}; animation-delay: {{f.delay}}"></div>
+</sc-for>
+</div>
+
+<nav aria-label="Main" style="position: relative; z-index: 1; flex: 1 1 220px; max-width: 100%; background: rgba(8,19,15,0.72); backdrop-filter: blur(12px); border-right: 1px solid #22342D; padding: 24px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+<div style="width: 36px; height: 36px; border-radius: 10px; background: #F2A93B; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1814" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path></svg>
+</div>
+<div style="display: flex; flex-direction: column">
+<span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; letter-spacing: -0.01em">WildWatch</span>
+<span style="font-size: 12px; color: #9DB0A6">Forest division console</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<a href="Main.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Home</a>
+<a href="Upload.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Upload</a>
+<a href="Alerts.dc.html" style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Alerts <span style="background: #FF6B5B; color: #2A0D09; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px">{{alertCount}}</span></a>
+<a href="Analytics.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Analytics</a>
+<a href="Accuracy.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; background: #1D2F28; color: #E8EFEA; text-decoration: none; font-size: 14px; font-weight: 500">Model accuracy</a>
+</div>
+<div style="margin-top: auto; background: #172822; border: 1px solid #22342D; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #9DB0A6">Pipeline</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span class="live" style="width: 8px; height: 8px; border-radius: 4px; background: {{pipeColor}}"></span>{{pipeText}}</span>
+<span style="font-size: 12px; color: #9DB0A6">{{lastImage}}</span>
+</div>
+</nav>
+
+<main class="{{mainCls}}" style="position: relative; z-index: 1; flex: 999 1 560px; min-width: 0; padding: 28px 32px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px">
+<sc-if value="{{apiDown}}"><div role="alert" style="background: rgba(52,18,14,0.9); border: 1px solid #7A3329; color: #FBE3DE; border-radius: 12px; padding: 14px 18px; font-size: 14px">Cannot reach the WildWatch server ({{apiError}}). Check that run.ps1 dashboard is still running. Retrying every 10 seconds.</div></sc-if>
+
+<header style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; color: #B9C8C0">Honest results · real numbers only, nothing estimated</span>
+<h1 class="shine" style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 40px; font-weight: 600; letter-spacing: -0.02em">Model accuracy</h1>
+</header>
+
+<section class="rise" aria-label="Evaluation status" style="background: rgba(44,36,14,0.8); backdrop-filter: blur(10px); border: 1px solid #6B5320; border-radius: 14px; padding: 16px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between">
+<span style="display: flex; align-items: center; gap: 10px; font-size: 14px; color: #FCE2B4"><span class="live" style="width: 10px; height: 10px; border-radius: 5px; background: #F2A93B"></span>{{statusText}}</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #FCE2B4">{{testsText}}</span>
+</section>
+
+<section class="rise" aria-label="Classifier comparison" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 8px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Species classifier race</h2>
+<span style="font-size: 13px; color: #9DB0A6">Compared on held-out images. Only measured numbers are shown.</span>
+</div>
+<span style="font-size: 12px; color: #9DB0A6">{{checkNote}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
+<sc-for list="{{models}}" as="m" hint-placeholder-count="3">
+<div class="lift" style="background: #1A2B25; border: 1px solid #24392F; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+<span style="font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 600">{{m.name}}</span>
+<span style="font-size: 11px; color: #9DB0A6">{{m.kind}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #9DB0A6">{{m.metricLabel}}</span>
+<sc-if value="{{m.has}}"><span style="font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 500">{{m.value}}</span></sc-if>
+<sc-if value="{{m.none}}"><div class="skel" style="height: 30px; width: 60%; border-radius: 6px"></div><span style="font-size: 12px; color: #9DB0A6">Not measured</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px; background: #13221C; border-radius: 8px; padding: 10px 12px">
+<span style="font-size: 12px; color: #9DB0A6">Single-image check</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px">{{m.check}}</span>
+<span class="pop" style="align-self: flex-start; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: {{m.cbg}}; color: {{m.cfg}}">{{m.verdict}}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+<section class="rise" aria-label="Empty frame filtering" style="flex: 1 1 360px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Empty-frame filter ({{detName}})</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{emptyMetrics}}" as="k" hint-placeholder-count="4">
+<div style="background: #1A2B25; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; color: #9DB0A6">{{k.label}}</span>
+<sc-if value="{{k.has}}"><span style="font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 500">{{k.value}}</span></sc-if>
+<sc-if value="{{k.none}}"><div class="skel" style="height: 22px; width: 70%; border-radius: 5px"></div><span style="font-size: 12px; color: #9DB0A6">Not measured</span></sc-if>
+</div>
+</sc-for>
+</div>
+<span style="font-size: 12px; color: #9DB0A6">Missing an animal is worse than a false alarm, so "animals wrongly discarded" must stay very low.</span>
+</section>
+
+<section class="rise" aria-label="Day versus night" style="flex: 1 1 360px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Day vs IR night</h2>
+<sc-for list="{{dn}}" as="d" hint-placeholder-count="3">
+<div style="display: grid; grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: center">
+<span style="font-size: 13px">{{d.label}}</span>
+<div style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #F2A93B"></span><sc-if value="{{d.dayHas}}"><span style="font-family: 'JetBrains Mono', monospace; font-size: 14px">{{d.day}}</span></sc-if><sc-if value="{{d.dayNone}}"><div class="skel" style="flex: 1; height: 14px; border-radius: 4px"></div><span style="font-size: 11px; color: #9DB0A6">Not measured</span></sc-if></div>
+<div style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #8C9CFF"></span><sc-if value="{{d.nightHas}}"><span style="font-family: 'JetBrains Mono', monospace; font-size: 14px">{{d.night}}</span></sc-if><sc-if value="{{d.nightNone}}"><div class="skel" style="flex: 1; height: 14px; border-radius: 4px"></div><span style="font-size: 11px; color: #9DB0A6">Not measured</span></sc-if></div>
+</div>
+</sc-for>
+<span style="font-size: 12px; color: #9DB0A6">Where the model fails at night will be shown here, not hidden.</span>
+</section>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+<section class="rise" aria-label="Confusion matrix" style="flex: 1 1 420px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Confusion matrix</h2>
+<span style="font-size: 12px; color: #9DB0A6">{{cmNote}}</span>
+</div>
+<div style="display: grid; grid-template-columns: 70px repeat(8, minmax(0, 1fr)); gap: 3px; align-items: center">
+<span></span>
+<sc-for list="{{labels}}" as="l" hint-placeholder-count="8"><span style="font-size: 10px; color: #9DB0A6; text-align: center; overflow: hidden; text-overflow: ellipsis">{{l}}</span></sc-for>
+<sc-for list="{{matrix}}" as="row" hint-placeholder-count="8">
+<span style="font-size: 11px; color: #9DB0A6">{{row.name}}</span>
+<sc-for list="{{row.cells}}" as="c" hint-placeholder-count="8">
+<div class="{{c.cls}}" style="height: 26px; border-radius: 3px; background: {{c.bg}}"></div>
+</sc-for>
+</sc-for>
+</div>
+<span style="font-size: 12px; color: #9DB0A6">Rows are true species, columns are predicted. A bright diagonal means correct.</span>
+</section>
+
+<section class="rise" aria-label="Generalisation and speed" style="flex: 1 1 320px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">New village test and speed</h2>
+<sc-for list="{{gen}}" as="g" hint-placeholder-count="4">
+<div style="background: #1A2B25; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; color: #9DB0A6">{{g.label}}</span>
+<sc-if value="{{g.has}}"><span style="font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 500">{{g.value}}</span></sc-if>
+<sc-if value="{{g.none}}"><div class="skel" style="height: 20px; width: 55%; border-radius: 5px"></div><span style="font-size: 12px; color: #9DB0A6">Not measured</span></sc-if>
+</div>
+</sc-for>
+<span style="font-size: 12px; color: #9DB0A6">Seen vs unseen camera locations show whether it still works at a new village.</span>
+</section>
+</div>
+
+<section class="rise" aria-label="Data integrity" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 8px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Data integrity</h2>
+<span style="font-size: 13px; color: #9DB0A6">Counts from reports/metrics.json</span>
+</div>
+<sc-if value="{{hasLeak}}"><span style="font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 6px; background: #5FD39A; color: #08291B">{{leakText}}</span></sc-if>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px">
+<sc-for list="{{splits}}" as="s" hint-placeholder-count="5">
+<div class="lift" style="background: #1A2B25; border: 1px solid #24392F; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #9DB0A6">{{s.name}}</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 500">{{s.n}}</span>
+<div style="height: 4px; border-radius: 2px; background: #1F332B"><div style="height: 4px; border-radius: 2px; width: {{s.w}}; background: #5FD39A"></div></div>
+</div>
+</sc-for>
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 1.6; color: #C9D6CF">{{integrityNote}}</p>
+</section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { data: {}, loaded: false, errs: {} };
+  }
+  componentDidMount() { WW.load(this, { summary: { url: '/api/summary', every: 10000 }, accuracy: { url: '/api/accuracy' } }); }
+  componentWillUnmount() { WW.stop(this); }
+  renderVals() {
+    var st = this.state || { data: {} };
+    var D = st.data || {}, AC = D.accuracy, S = D.summary;
+    var seed = 31;
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    function trees(base, minH, maxH, step) {
+      var d = 'M0 300 L0 ' + base;
+      for (var x = 0; x <= 1440; x += step) {
+        var h = minH + rnd() * (maxH - minH);
+        d += ' L' + (x + step / 2) + ' ' + Math.round(base - h) + ' L' + (x + step) + ' ' + base;
+      }
+      return d + ' L1440 300 Z';
+    }
+    var treesFar = trees(250, 40, 110, 34);
+    var treesNear = trees(285, 30, 90, 26);
+    var flies = [];
+    for (var i = 0; i < 28; i++) {
+      var s = 2 + Math.round(rnd() * 3);
+      flies.push({ x: Math.round(rnd() * 100) + '%', y: Math.round(rnd() * 1500) + 'px', s: s + 'px', d: (7 + rnd() * 8).toFixed(1) + 's', delay: (-rnd() * 12).toFixed(1) + 's' });
+    }
+
+    var OK = { cbg: '#5FD39A', cfg: '#08291B' }, BAD = { cbg: '#FF6B5B', cfg: '#2A0D09' }, NA = { cbg: '#3E5A4F', cfg: '#E8EFEA' };
+    function cell(v, kind) { return v == null ? { has: false, none: true, value: '' } : { has: true, none: false, value: kind === 'num' ? String(v) : kind === 'ms' ? v + ' ms' : WW.pct(v) }; }
+    var models = ((AC && AC.models) || []).map(function (m) {
+      var c = cell(m.metric), v = m.verdict || 'NOT RUN', pal = v === 'CORRECT' ? OK : v === 'WRONG' ? BAD : NA;
+      return Object.assign({ name: m.name, kind: m.kind, metricLabel: m.metric_label || 'Accuracy', check: m.check || 'Not measured', verdict: v }, c, pal);
+    });
+    var ef = (AC && AC.empty_filter) || {};
+    var emptyMetrics = [['Precision', ef.precision], ['Recall', ef.recall], ['F1', ef.f1], ['Animals wrongly discarded', ef.wrongly_discarded]]
+      .map(function (r) { return Object.assign({ label: r[0] }, cell(r[1])); });
+    var dnm = (AC && AC.day_night) || {};
+    function dn(label, key, kind) {
+      var o = dnm[key] || {}, d = cell(o.day, kind), n = cell(o.night, kind);
+      return { label: label, dayHas: d.has, dayNone: d.none, day: d.value, nightHas: n.has, nightNone: n.none, night: n.value };
+    }
+    var dnRows = [dn('Empty filter F1', 'empty_filter_f1'), dn('Species macro-F1', 'species_macro_f1'), dn('Count error (MAE)', 'count_mae', 'num')];
+    var gn = (AC && AC.generalisation) || {};
+    var gen = [['Seen locations (cis) macro-F1', cell(gn.cis_macro_f1)], ['New locations (trans) macro-F1', cell(gn.trans_macro_f1)],
+      ['Detection speed per image', cell(gn.detect_ms, 'ms')], ['Classification speed per image', cell(gn.classify_ms, 'ms')]]
+      .map(function (r) { return Object.assign({ label: r[0] }, r[1]); });
+    var cm = AC && AC.confusion;
+    var labels, matrix;
+    if (cm && cm.labels && cm.matrix) {
+      labels = cm.labels.map(function (l) { return WW.cap(l); });
+      matrix = cm.matrix.map(function (row, r) {
+        var tot = row.reduce(function (a, b) { return a + b; }, 0) || 1;
+        return { name: labels[r], cells: row.map(function (v, c) {
+          var a = Math.round(Math.max(v ? 0.12 : 0, v / tot) * 100) / 100;
+          return { bg: v ? (r === c ? 'rgba(95,211,154,' + a + ')' : 'rgba(255,107,91,' + a + ')') : '#18281F', cls: '' };
+        }) };
+      });
+    } else {
+      labels = ['', '', '', '', '', '', '', ''];
+      matrix = labels.map(function (n, r) { return { name: '', cells: labels.map(function (_, c) { return r === c ? { bg: 'rgba(95,211,154,0.18)', cls: 'skel' } : { bg: '#18281F', cls: '' }; }) }; });
+    }
+    var sp = (AC && AC.splits) || {};
+    var spKeys = Object.keys(sp), spMax = Math.max.apply(null, spKeys.map(function (k) { return sp[k]; }).concat([1]));
+    var splits = spKeys.map(function (k) { return { name: k, n: WW.fmt(sp[k]), w: Math.round(sp[k] / spMax * 100) + '%' }; });
+    return Object.assign(WW.shell(st), { treesFar: treesFar, treesNear: treesNear, flies: flies, models: models, emptyMetrics: emptyMetrics, dn: dnRows, gen: gen,
+      labels: labels, matrix: matrix, splits: splits, detName: S ? S.detector : 'detector',
+      statusText: !AC ? 'Loading evaluation results…' : AC.evaluated ? 'Results loaded from reports/metrics.json' + (AC.source ? ' · ' + AC.source : '') + '. Fields that were never measured stay blank and say Not measured.'
+        : 'Evaluation has not run yet. Fields fill in from reports/metrics.json and reports/model_selection.md after evaluation.',
+      testsText: AC && AC.tests ? AC.tests : 'Tests: not recorded',
+      checkNote: AC && AC.check_note ? AC.check_note : 'Single-image check: only shown where one was run',
+      cmNote: cm ? 'Measured' : 'Not measured',
+      hasLeak: !!(AC && AC.splits && AC.leak_checked), leakText: 'LEAK CHECKED',
+      integrityNote: AC && AC.integrity_note ? AC.integrity_note : 'Not measured. No data-integrity check has been recorded in reports/metrics.json.' });
+  }
+}
+</script>
+</body>
+</html>

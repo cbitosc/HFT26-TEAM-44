@@ -1,0 +1,19 @@
+# secrets - never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# user data and models
+src/data/
+*.pkl
+*.db
+*.db-wal
+*.db-shm
+
+# python
+venv/
+.venv/
+__pycache__/
+.pytest_cache/

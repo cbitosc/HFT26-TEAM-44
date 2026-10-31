@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>WildWatch analytics</title>
+<script src="api.js"></script>
+<script src="wildwatch-runtime.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07110D}
+a{color:#F2A93B}a:hover{color:#FFC56B}
+@keyframes live{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes draw{from{stroke-dashoffset:1600}to{stroke-dashoffset:0}}
+@keyframes spin{from{transform:rotate(-90deg) scale(.6);opacity:0}to{transform:rotate(0) scale(1);opacity:1}}
+@keyframes drift{0%{transform:translate(0,0);opacity:0}15%{opacity:.95}50%{transform:translate(26px,-38px);opacity:.45}85%{opacity:.9}100%{transform:translate(-14px,-76px);opacity:0}}
+@keyframes aurora{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(140px,50px) scale(1.2)}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes moon{0%,100%{box-shadow:0 0 50px 14px rgba(244,239,216,.22)}50%{box-shadow:0 0 80px 26px rgba(244,239,216,.32)}}
+button{transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}
+button:hover{transform:translateY(-2px);filter:brightness(1.1);box-shadow:0 8px 18px rgba(0,0,0,.4)}
+button:active{transform:translateY(0) scale(.96)}
+button:focus-visible,a:focus-visible{outline:2px solid #F2A93B;outline-offset:2px}
+nav a{transition:background .2s ease,color .2s ease,padding-left .2s ease}
+nav a:hover{background:#1A2B25;color:#E8EFEA;padding-left:18px}
+main section{transition:border-color .25s ease}
+main section:hover{border-color:#3A564B}
+.lift{transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.lift:hover{transform:translateY(-5px);border-color:#3F6B5A;box-shadow:0 14px 30px rgba(0,0,0,.5)}
+.trow{transition:background .2s ease}
+.trow:hover{background:#1D3029}
+.cell{transition:transform .15s ease}
+.cell:hover{transform:scale(1.35)}
+.fly{position:absolute;border-radius:50%;background:#F7E27A;box-shadow:0 0 10px 3px rgba(247,226,122,.55);opacity:.75}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.3}
+.shine{background:linear-gradient(90deg,#E8EFEA 40%,#FFD58A 50%,#E8EFEA 60%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+.line{stroke-dasharray:1600}
+@media (prefers-reduced-motion:no-preference){
+.fly{animation:drift var(--d,9s) ease-in-out infinite}
+.blob{animation:aurora 20s ease-in-out infinite}
+.shine{animation:shimmer 7s linear infinite}
+.moon{animation:moon 5s ease-in-out infinite}
+.live{animation:live 1.6s ease-in-out infinite}
+.grow{transform-origin:left center;animation:grow 1s cubic-bezier(.2,.8,.2,1) both}
+.rise{animation:rise .6s ease both}
+.fade{animation:fade .9s ease both}
+.line{animation:draw 2s ease both}
+.donut{animation:spin 1.1s cubic-bezier(.2,.8,.2,1) both}
+}
+</style>
+</helmet>
+<div style="position: relative; overflow: hidden; min-height: 100vh; background: #07110D; color: #E8EFEA; font-family: Inter, system-ui, sans-serif; display: flex; flex-wrap: wrap; align-items: stretch">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden">
+<div style="position: absolute; left: 0; top: 0; width: 100%; height: 300px; background: linear-gradient(180deg, #14302A 0%, #0C1F19 60%, #07110D 100%)"></div>
+<div class="blob" style="left: 10%; top: -120px; width: 520px; height: 320px; background: #2BB48A"></div>
+<div class="blob" style="left: 55%; top: -80px; width: 460px; height: 280px; background: #5B6CFF; animation-delay: -8s"></div>
+<div class="blob" style="left: 30%; top: 1000px; width: 600px; height: 400px; background: #1E7A5C; animation-delay: -4s"></div>
+<div class="moon" style="position: absolute; right: 8%; top: 46px; width: 64px; height: 64px; border-radius: 50%; background: #F4EFD8; box-shadow: 0 0 60px 18px rgba(244,239,216,.25)"></div>
+<svg viewBox="0 0 1440 300" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 300px">
+<path ww-d="{{treesFar}}" fill="#0E241C"></path>
+<path ww-d="{{treesNear}}" fill="#07110D"></path>
+</svg>
+<sc-for list="{{flies}}" as="f" hint-placeholder-count="0">
+<div class="fly" style="left: {{f.x}}; top: {{f.y}}; width: {{f.s}}; height: {{f.s}}; --d: {{f.d}}; animation-delay: {{f.delay}}"></div>
+</sc-for>
+</div>
+
+<nav aria-label="Main" style="position: relative; z-index: 1; flex: 1 1 220px; max-width: 100%; background: rgba(8,19,15,0.72); backdrop-filter: blur(12px); border-right: 1px solid #22342D; padding: 24px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+<div style="width: 36px; height: 36px; border-radius: 10px; background: #F2A93B; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1814" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path></svg>
+</div>
+<div style="display: flex; flex-direction: column">
+<span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; letter-spacing: -0.01em">WildWatch</span>
+<span style="font-size: 12px; color: #9DB0A6">Forest division console</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<a href="Main.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Home</a>
+<a href="Upload.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Upload</a>
+<a href="Alerts.dc.html" style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Alerts <span style="background: #FF6B5B; color: #2A0D09; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px">{{alertCount}}</span></a>
+<a href="Analytics.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; background: #1D2F28; color: #E8EFEA; text-decoration: none; font-size: 14px; font-weight: 500">Analytics</a>
+<a href="Accuracy.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Model accuracy</a>
+</div>
+<div style="margin-top: auto; background: #172822; border: 1px solid #22342D; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #9DB0A6">Pipeline</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span class="live" style="width: 8px; height: 8px; border-radius: 4px; background: {{pipeColor}}"></span>{{pipeText}}</span>
+<span style="font-size: 12px; color: #9DB0A6">{{lastImage}}</span>
+</div>
+</nav>
+
+<main class="{{mainCls}}" style="position: relative; z-index: 1; flex: 999 1 560px; min-width: 0; padding: 28px 32px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px">
+<sc-if value="{{apiDown}}"><div role="alert" style="background: rgba(52,18,14,0.9); border: 1px solid #7A3329; color: #FBE3DE; border-radius: 12px; padding: 14px 18px; font-size: 14px">Cannot reach the WildWatch server ({{apiError}}). Check that run.ps1 dashboard is still running. Retrying every 10 seconds.</div></sc-if>
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; color: #B9C8C0">Camera-trap analytics · Live from the database</span>
+<h1 class="shine" style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 40px; font-weight: 600; letter-spacing: -0.02em">Analytics</h1>
+</div>
+<div role="group" aria-label="Time range" style="display: flex; gap: 6px; background: rgba(20,38,31,0.7); border: 1px solid #24392F; border-radius: 24px; padding: 4px">
+<sc-for list="{{ranges}}" as="r" hint-placeholder-count="3">
+<button type="button" onClick="{{r.pick}}" aria-pressed="{{r.pressed}}" style="min-height: 40px; padding: 0 16px; border-radius: 20px; border: none; background: {{r.bg}}; color: {{r.fg}}; font: 500 13px Inter, sans-serif; cursor: pointer">{{r.label}}</button>
+</sc-for>
+</div>
+</header>
+
+<section class="rise" aria-label="Dataset summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; border: none">
+<div class="lift" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; color: #9DB0A6">Images in range</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 500">{{tImages}}</span>
+<span style="font-size: 12px; color: #9DB0A6">{{rangeLabel}}</span>
+</div>
+<div class="lift" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; color: #9DB0A6">Images with something in them</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 500">{{tAnimal}}</span>
+<span style="font-size: 12px; color: #9DB0A6">After removing {{tEmpty}} empty</span>
+</div>
+<div class="lift" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; color: #9DB0A6">Camera bursts</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 500">{{tBursts}}</span>
+<span style="font-size: 12px; color: #9DB0A6">Counted as one event each</span>
+</div>
+<div class="lift" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; color: #9DB0A6">Night share of sightings</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 500; color: #8C9CFF">{{tNight}}</span>
+<span style="font-size: 12px; color: #9DB0A6">{{tNightNote}}</span>
+</div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+<section class="rise" aria-label="Sightings over time" style="flex: 2 1 520px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Animal sightings over time</h2>
+<span style="font-size: 12px; color: #9DB0A6">{{rangeLabel}}</span>
+</div>
+<div style="position: relative; height: 220px">
+<svg role="img" aria-label="Line chart of daily animal sightings" viewBox="0 0 640 220" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%">
+<line x1="0" y1="55" x2="640" y2="55" stroke="#22342D" stroke-width="1"></line>
+<line x1="0" y1="110" x2="640" y2="110" stroke="#22342D" stroke-width="1"></line>
+<line x1="0" y1="165" x2="640" y2="165" stroke="#22342D" stroke-width="1"></line>
+<path ww-d="{{areaNight}}" fill="rgba(140,156,255,0.16)"></path>
+<path ww-d="{{areaDay}}" fill="rgba(242,169,59,0.14)"></path>
+<path class="line" ww-d="{{lineNight}}" fill="none" stroke="#8C9CFF" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+<path class="line" ww-d="{{lineDay}}" fill="none" stroke="#F2A93B" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+</svg>
+</div>
+<div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9DB0A6">
+<sc-for list="{{xTicks}}" as="x" hint-placeholder-count="5"><span>{{x}}</span></sc-for>
+</div>
+<div style="display: flex; gap: 16px; font-size: 12px; color: #9DB0A6">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 3px; border-radius: 2px; background: #8C9CFF"></span>Night</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 3px; border-radius: 2px; background: #F2A93B"></span>Day</span>
+</div>
+</section>
+
+<section class="rise" aria-label="Empty frame savings" style="flex: 1 1 280px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center">
+<h2 style="margin: 0; align-self: flex-start; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Empty frames removed</h2>
+<div class="donut" style="width: 170px; height: 170px; border-radius: 50%; background: {{donutBg}}; display: flex; align-items: center; justify-content: center">
+<div style="width: 124px; height: 124px; border-radius: 50%; background: #10201A; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 500; color: #5FD39A">{{emptyPct}}</span>
+<span style="font-size: 11px; color: #9DB0A6">of all images</span>
+</div>
+</div>
+<span style="font-size: 13px; color: #B9C8C0; text-align: center; line-height: 1.5">{{emptyNote}}</span>
+</section>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+<section class="rise" aria-label="Species distribution" style="flex: 1 1 380px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Species and day vs night</h2>
+<span style="font-size: 12px; color: #9DB0A6">{{rangeLabel}}</span>
+</div>
+<sc-for list="{{species}}" as="s" hint-placeholder-count="8">
+<div style="display: grid; grid-template-columns: 96px minmax(0, 1fr) 44px; gap: 12px; align-items: center">
+<span style="font-size: 14px">{{s.name}}</span>
+<div style="height: 12px; border-radius: 6px; background: #1F332B; overflow: hidden">
+<div class="grow" style="display: flex; height: 12px; width: {{s.w}}">
+<div style="height: 12px; width: {{s.dayW}}; background: #F2A93B"></div>
+<div style="height: 12px; width: {{s.nightW}}; background: #8C9CFF"></div>
+</div>
+</div>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; text-align: right; color: #C9D6CF">{{s.n}}</span>
+</div>
+</sc-for>
+<div style="display: flex; gap: 16px; font-size: 12px; color: #9DB0A6">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 2px; background: #F2A93B"></span>Day</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 2px; background: #8C9CFF"></span>Night</span>
+</div>
+</section>
+
+<section class="rise" aria-label="Activity by hour" style="flex: 1 1 420px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Activity by hour</h2>
+<span style="font-size: 12px; color: #9DB0A6">{{rangeLabel}}</span>
+</div>
+<sc-for list="{{heat}}" as="row" hint-placeholder-count="8">
+<div style="display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 10px; align-items: center">
+<span style="font-size: 13px">{{row.name}}</span>
+<div style="display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px">
+<sc-for list="{{row.cells}}" as="cell" hint-placeholder-count="24">
+<div class="cell fade" style="height: 20px; border-radius: 3px; background: {{cell.color}}"></div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<div style="display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 10px">
+<span></span>
+<div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9DB0A6"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+</div>
+</section>
+</div>
+
+<section class="rise" aria-label="Per-camera stats" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Cameras</h2>
+<span style="font-size: 12px; color: #9DB0A6">Zones and villages from the camera registry</span>
+</div>
+<div style="overflow-x: auto">
+<div role="table" aria-label="Per-camera stats" style="min-width: 720px; font-size: 14px">
+<div role="row" style="display: grid; grid-template-columns: 90px minmax(0,1.3fr) 80px 80px minmax(0,1.4fr) minmax(0,1fr) 100px; color: #9DB0A6; font-size: 12px">
+<span role="columnheader" style="padding: 10px 12px">Camera</span>
+<span role="columnheader" style="padding: 10px 12px">Village zone</span>
+<span role="columnheader" style="padding: 10px 12px; text-align: right">Images</span>
+<span role="columnheader" style="padding: 10px 12px; text-align: right">Animals</span>
+<span role="columnheader" style="padding: 10px 12px">Empty share</span>
+<span role="columnheader" style="padding: 10px 12px">Top species</span>
+<span role="columnheader" style="padding: 10px 12px">Risk today</span>
+</div>
+<sc-for list="{{cams}}" as="c" hint-placeholder-count="6">
+<div role="row" class="trow" style="display: grid; grid-template-columns: 90px minmax(0,1.3fr) 80px 80px minmax(0,1.4fr) minmax(0,1fr) 100px; align-items: center; border-top: 1px solid #22342D">
+<span role="cell" style="padding: 12px; font-family: 'JetBrains Mono', monospace">Cam {{c.id}}</span>
+<span role="cell" style="padding: 12px">{{c.village}}</span>
+<span role="cell" style="padding: 12px; text-align: right; font-family: 'JetBrains Mono', monospace">{{c.images}}</span>
+<span role="cell" style="padding: 12px; text-align: right; font-family: 'JetBrains Mono', monospace">{{c.animals}}</span>
+<span role="cell" style="padding: 12px"><span style="display: flex; align-items: center; gap: 8px"><span style="display: block; width: 90px; height: 6px; border-radius: 3px; background: #1F332B"><span class="grow" style="display: block; height: 6px; border-radius: 3px; width: {{c.emptyW}}; background: #5FD39A"></span></span><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #B9C8C0">{{c.emptyW}}</span></span></span>
+<span role="cell" style="padding: 12px">{{c.top}}</span>
+<span role="cell" style="padding: 12px"><span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: {{c.bg}}; color: {{c.fg}}">{{c.risk}}</span></span>
+</div>
+</sc-for>
+</div>
+</div>
+</section>
+
+<section class="rise" aria-label="Movement tracks" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Movement tracks</h2>
+<span style="font-size: 12px; color: #9DB0A6">{{trackNote}}</span>
+</div>
+<sc-if value="{{noTracks}}"><span style="font-size: 14px; color: #9DB0A6">No species was seen at two different cameras within the time window yet.</span></sc-if>
+<sc-for list="{{tracks}}" as="t" hint-placeholder-count="2">
+<div class="trow" style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; border: 1px solid #22342D">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: {{t.bg}}; color: {{t.fg}}">{{t.level}}</span>
+<span style="font-weight: 600">{{t.species}}</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #E8EFEA">{{t.route}}</span>
+<span style="font-size: 13px; color: #9DB0A6">{{t.meta}}</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{t.stops}}" as="s" hint-placeholder-count="2"><span style="font-size: 12px; padding: 4px 8px; border-radius: 6px; background: #13221C; color: #C9D6CF">{{s.text}}</span></sc-for>
+</div>
+</div>
+</sc-for>
+</section>
+
+<section class="rise" aria-label="Camera registry" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Camera registry</h2>
+<span style="font-size: 12px; color: #9DB0A6">{{regNote}}</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+<div aria-label="Add camera" style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 14px; background: #13221C; border: 1px solid #24392F; border-radius: 12px; padding: 16px">
+<h3 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600">Add camera</h3>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-id" style="font-size: 13px; color: #B9C8C0">Camera ID</label>
+<input id="nc-id" type="text" placeholder="e.g. 52" autocomplete="off" aria-describedby="nc-id-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.camera_idBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<sc-if value="{{camForm.camera_idBad}}"><span id="nc-id-err" style="font-size: 12px; color: #FFB4A8">{{camForm.camera_idErr}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-name" style="font-size: 13px; color: #B9C8C0">Name</label>
+<input id="nc-name" type="text" placeholder="e.g. River crossing" aria-describedby="nc-name-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.nameBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<sc-if value="{{camForm.nameBad}}"><span id="nc-name-err" style="font-size: 12px; color: #FFB4A8">{{camForm.nameErr}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-lat" style="font-size: 13px; color: #B9C8C0">Latitude (-90 to 90)</label>
+<input id="nc-lat" type="text" inputmode="decimal" placeholder="17.3850" aria-describedby="nc-lat-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.latitudeBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<sc-if value="{{camForm.latitudeBad}}"><span id="nc-lat-err" style="font-size: 12px; color: #FFB4A8">{{camForm.latitudeErr}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-lng" style="font-size: 13px; color: #B9C8C0">Longitude (-180 to 180)</label>
+<input id="nc-lng" type="text" inputmode="decimal" placeholder="78.4867" aria-describedby="nc-lng-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.longitudeBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<sc-if value="{{camForm.longitudeBad}}"><span id="nc-lng-err" style="font-size: 12px; color: #FFB4A8">{{camForm.longitudeErr}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-village" style="font-size: 13px; color: #B9C8C0">Village</label>
+<input id="nc-village" type="text" placeholder="e.g. Rampur" aria-describedby="nc-village-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.villageBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<sc-if value="{{camForm.villageBad}}"><span id="nc-village-err" style="font-size: 12px; color: #FFB4A8">{{camForm.villageErr}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-zone" style="font-size: 13px; color: #B9C8C0">Zone type</label>
+<select id="nc-zone" aria-describedby="nc-zone-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.zone_typeBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<option value="">Choose a zone type…</option>
+<sc-for list="{{zoneOptions}}" as="z" hint-placeholder-count="6"><option value="{{z.id}}">{{z.label}}</option></sc-for>
+</select>
+<sc-if value="{{camForm.zone_typeBad}}"><span id="nc-zone-err" style="font-size: 12px; color: #FFB4A8">{{camForm.zone_typeErr}}</span></sc-if>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<button type="button" id="nc-add" onClick="{{addCamera}}" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: none; background: #F2A93B; color: #1E1405; font: 600 14px Inter, sans-serif; cursor: pointer">{{addLabel}}</button>
+<span role="status" style="font-size: 13px; color: {{camForm.msgColor}}">{{camForm.msg}}</span>
+</div>
+<span style="font-size: 12px; color: #9DB0A6">The zone type sets the risk multiplier. Multipliers are our team's choices, kept in config.yaml.</span>
+</div>
+<div style="flex: 1 1 420px; min-width: 0; overflow-x: auto">
+<div role="table" aria-label="Registered cameras" style="min-width: 520px; font-size: 14px">
+<div role="row" style="display: grid; grid-template-columns: 70px minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1.3fr) 96px; color: #9DB0A6; font-size: 12px">
+<span role="columnheader" style="padding: 8px 10px">Camera</span>
+<span role="columnheader" style="padding: 8px 10px">Name · village</span>
+<span role="columnheader" style="padding: 8px 10px">Zone</span>
+<span role="columnheader" style="padding: 8px 10px">Coordinates</span>
+<span role="columnheader" style="padding: 8px 10px">Status</span>
+</div>
+<sc-for list="{{reg}}" as="c" hint-placeholder-count="6">
+<div role="row" class="trow" style="display: grid; grid-template-columns: 70px minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1.3fr) 96px; align-items: center; border-top: 1px solid #22342D; opacity: {{c.op}}">
+<span role="cell" style="padding: 10px; font-family: 'JetBrains Mono', monospace">{{c.id}}</span>
+<span role="cell" style="padding: 10px">{{c.name}}<br><span style="font-size: 12px; color: #9DB0A6">{{c.village}}</span></span>
+<span role="cell" style="padding: 10px; font-size: 13px">{{c.zone}}</span>
+<span role="cell" style="padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #B9C8C0">{{c.coords}}</span>
+<span role="cell" style="padding: 10px"><button type="button" onClick="{{c.toggle}}" title="{{c.toggleTitle}}" style="min-height: 34px; padding: 0 10px; border-radius: 6px; border: 1px solid #2E453C; background: transparent; color: {{c.fg}}; font: 500 12px Inter, sans-serif; cursor: pointer">{{c.toggleLabel}}</button></span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</section>
+
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1760}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { range: '14d', data: {}, loaded: false, errs: {}, camErr: {}, camMsg: '', camOk: true, saving: false };
+  }
+  componentDidMount() {
+    WW.load(this, { summary: { url: '/api/summary', every: 10000 },
+      analytics: { url: function (c) { return '/api/analytics?range=' + c.state.range; }, every: 30000 },
+      cameras: { url: '/api/cameras', every: 30000 },
+      tracks: { url: function (c) { return '/api/tracks?range=' + c.state.range; }, every: 30000 } });
+  }
+  componentWillUnmount() { WW.stop(this); }
+  addCamera() {
+    var self = this, v = function (id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; };
+    var body = { camera_id: v('nc-id'), name: v('nc-name'), latitude: v('nc-lat'), longitude: v('nc-lng'), village: v('nc-village'), zone_type: v('nc-zone') };
+    var err = {};                                              // same rules as the server, so mistakes show before sending
+    if (!body.camera_id) err.camera_id = 'Camera ID is required.';
+    else if (!/^[A-Za-z0-9_-]{1,16}$/.test(body.camera_id)) err.camera_id = 'Use 1-16 letters, digits, - or _ only.';
+    var lat = Number(body.latitude), lng = Number(body.longitude);
+    if (body.latitude === '' || isNaN(lat) || lat < -90 || lat > 90) err.latitude = 'Latitude must be a number from -90 to 90.';
+    if (body.longitude === '' || isNaN(lng) || lng < -180 || lng > 180) err.longitude = 'Longitude must be a number from -180 to 180.';
+    if (!body.village) err.village = 'Village is required.';
+    if (!body.zone_type) err.zone_type = 'Choose a zone type from the list.';
+    if (Object.keys(err).length) { this.setState({ camErr: err, camMsg: 'Fix the highlighted fields.', camOk: false }); return; }
+    body.latitude = lat; body.longitude = lng;
+    this.setState({ saving: true, camErr: {}, camMsg: '' });
+    WW.api('/api/cameras', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) {
+      ['nc-id', 'nc-name', 'nc-lat', 'nc-lng', 'nc-village', 'nc-zone'].forEach(function (id) { var e = document.getElementById(id); if (e) e.value = ''; });
+      self.setState({ saving: false, camErr: {}, camOk: true, camMsg: 'Camera ' + r.camera.id + ' added. It now appears in the Upload page list.' });
+      WW.refresh(self, 'cameras'); WW.refresh(self, 'analytics');
+    }).catch(function (e) {
+      self.setState({ saving: false, camErr: (e.body && e.body.fields) || {}, camOk: false, camMsg: e.message || 'Could not add the camera.' });
+    });
+  }
+  toggleCamera(c) {
+    var self = this;
+    WW.api('/api/cameras/' + encodeURIComponent(c.id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !c.active }) })
+      .then(function () { WW.refresh(self, 'cameras'); })
+      .catch(function (e) { self.setState({ camOk: false, camMsg: e.message }); });
+  }
+  renderVals() {
+    var self = this;
+    var st = this.state || { range: '14d', data: {} };
+    var AN = (st.data || {}).analytics;
+    var seed = 23;
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    function trees(base, minH, maxH, step) {
+      var d = 'M0 300 L0 ' + base;
+      for (var x = 0; x <= 1440; x += step) {
+        var h = minH + rnd() * (maxH - minH);
+        d += ' L' + (x + step / 2) + ' ' + Math.round(base - h) + ' L' + (x + step) + ' ' + base;
+      }
+      return d + ' L1440 300 Z';
+    }
+    var treesFar = trees(250, 40, 110, 34);
+    var treesNear = trees(285, 30, 90, 26);
+    var flies = [];
+    for (var i = 0; i < 30; i++) {
+      var s = 2 + Math.round(rnd() * 3);
+      flies.push({ x: Math.round(rnd() * 100) + '%', y: Math.round(rnd() * 1700) + 'px', s: s + 'px', d: (7 + rnd() * 8).toFixed(1) + 's', delay: (-rnd() * 12).toFixed(1) + 's' });
+    }
+
+    var ranges = ['24h', '14d', '30d'].map(function (k) {
+      var on = k === st.range;
+      return { label: k, pressed: on ? 'true' : 'false', bg: on ? '#F2A93B' : 'transparent', fg: on ? '#1E1405' : '#C9D6CF',
+        pick: function () { self.setState({ range: k }); WW.refresh(self, 'analytics'); WW.refresh(self, 'tracks'); } };
+    });
+    var ok = AN && AN.range === st.range;
+    var T = ok ? AN.totals : null;
+    var night = ok ? AN.series.night : [], day = ok ? AN.series.day : [];
+    var mx = Math.max.apply(null, night.concat(day).concat([1]));
+    function toLine(arr) {
+      if (arr.length < 2) return '';
+      return arr.map(function (v, j) { return (j === 0 ? 'M' : 'L') + Math.round(j / (arr.length - 1) * 640) + ' ' + Math.round(220 - v / mx * 200); }).join(' ');
+    }
+    function toArea(arr) { return arr.length < 2 ? '' : toLine(arr) + ' L640 220 L0 220 Z'; }
+    var spl = ok ? AN.species.slice(0, 8) : [];
+    var spMax = spl.length ? spl[0].n : 1;
+    var species = spl.map(function (s) {
+      return { name: WW.cap(s.name), n: s.n, w: Math.round(s.n / spMax * 100) + '%', dayW: Math.round(s.day / s.n * 100) + '%', nightW: Math.round(s.night / s.n * 100) + '%' };
+    });
+    var heat = (ok ? AN.activity : []).map(function (row) {
+      var m2 = Math.max.apply(null, row.hours.concat([1]));
+      return { name: WW.cap(row.name), cells: row.hours.map(function (v, h) {
+        var a = Math.round(Math.max(0.08, v / m2) * 100) / 100, nt = h < 6 || h >= 19;
+        return { color: nt ? 'rgba(140,156,255,' + a + ')' : 'rgba(242,169,59,' + a + ')' };
+      }) };
+    });
+    var R = { CRITICAL: ['#FF3D6E', '#2B0612'], HIGH: ['#FF6B5B', '#2A0D09'], MEDIUM: ['#F2A93B', '#1E1405'], LOW: ['#3E5A4F', '#E8EFEA'], NONE: ['#24392F', '#9DB0A6'] };
+    var cams = (ok ? AN.cameras : []).map(function (c) {
+      var r = c.risk || 'NONE';
+      return { id: c.id, village: c.village, images: WW.fmt(c.images), animals: WW.fmt(c.animals),
+        emptyW: c.empty_share == null ? '0%' : c.empty_share + '%', top: c.top ? WW.cap(c.top) : '—', risk: r === 'NONE' ? 'None' : r, bg: R[r][0], fg: R[r][1] };
+    });
+    var ep = T && T.empty_pct != null ? T.empty_pct : 0;
+    var CR = (st.data || {}).cameras;
+    var keys = ['camera_id', 'name', 'latitude', 'longitude', 'village', 'zone_type'], camForm = { msg: st.camMsg || ' ', msgColor: st.camOk ? '#5FD39A' : '#FFB4A8' };
+    keys.forEach(function (k) { var e = (st.camErr || {})[k]; camForm[k + 'Bad'] = !!e; camForm[k + 'Err'] = e || ''; camForm[k + 'Border'] = e ? '#FF6B5B' : '#2E453C'; });
+    var zoneOptions = CR ? CR.zone_types.map(function (z) { return { id: z.id, label: WW.cap(z.id.replace(/_/g, ' ')) + ' · risk ×' + z.factor }; }) : [];
+    var reg = CR ? CR.cameras.map(function (c) {
+      return { id: c.id, name: c.name, village: c.village, zone: WW.cap((c.zone_type || '').replace(/_/g, ' ')) + ' ×' + c.zone,
+        coords: c.latitude == null ? 'none (old layout)' : c.latitude.toFixed(4) + ', ' + c.longitude.toFixed(4),
+        op: c.active ? '1' : '0.55', fg: c.active ? '#E8EFEA' : '#F2A93B', toggleLabel: c.active ? 'Deactivate' : 'Activate',
+        toggleTitle: c.active ? 'Stops new uploads for this camera. Its images and alerts are kept.' : 'Allow uploads again',
+        toggle: function () { self.toggleCamera(c); } };
+    }) : [];
+    var TRK = (st.data || {}).tracks;
+    var trackOk = TRK && TRK.range === st.range;
+    var tracks = trackOk ? TRK.tracks.map(function (tr) {
+      var r = R[tr.level] || R.NONE;
+      var meta = tr.cameras + ' cameras · ' + (tr.minutes < 60 ? tr.minutes + ' min' : Math.round(tr.minutes / 6) / 10 + ' h') +
+        (tr.distance_km != null ? ' · ' + tr.distance_km + ' km' : ' · distance unknown (camera without coordinates)') + ' · ' + tr.start.slice(5, 16).replace('T', ' ');
+      return { species: WW.cap(tr.species), route: tr.route, meta: meta, level: tr.level, bg: r[0], fg: r[1],
+        stops: tr.stops.map(function (s) { return { text: s.first.slice(11, 16) + ' Cam ' + s.camera + ' · ' + s.village + (s.count > 1 ? ' · ' + s.count : '') }; }) };
+    }) : [];
+    var nAct = CR ? CR.cameras.filter(function (c) { return c.active; }).length : 0;
+    return Object.assign(WW.shell(st), { treesFar: treesFar, treesNear: treesNear, flies: flies, ranges: ranges,
+      rangeLabel: ok ? AN.label + (T.sightings ? '' : ' · no sightings yet') : 'Loading…', xTicks: ok ? AN.ticks : ['', '', '', '', ''],
+      lineNight: toLine(night), lineDay: toLine(day), areaNight: toArea(night), areaDay: toArea(day),
+      species: species, heat: heat, cams: cams, tracks: tracks, noTracks: trackOk && !tracks.length,
+      trackNote: TRK ? 'Same species at 2+ cameras, each within ' + TRK.gap_minutes + ' min · a species trail, not one identified animal' : 'Loading…',
+      camForm: camForm, zoneOptions: zoneOptions, reg: reg,
+      addCamera: function () { self.addCamera(); }, addLabel: st.saving ? 'Saving…' : 'Add camera',
+      regNote: CR ? nAct + ' active of ' + CR.cameras.length + ' · cameras with images can be deactivated, never deleted' : 'Loading…',
+      tImages: T ? WW.fmt(T.images) : '—', tAnimal: T ? WW.fmt(T.with_animals) : '—', tEmpty: T ? WW.fmt(T.empty) : '—',
+      tBursts: T ? WW.fmt(T.bursts) : '—', tNight: T ? (T.night_share == null ? 'No sightings' : T.night_share + '%') : '—',
+      tNightNote: T ? 'Of ' + WW.fmt(T.sightings) + ' animals counted' : ' ',
+      donutBg: 'conic-gradient(#5FD39A 0 ' + ep + '%, #22342D ' + ep + '% 100%)',
+      emptyPct: T ? (T.empty_pct == null ? '—' : T.empty_pct + '%') : '—',
+      emptyNote: T ? (T.images ? T.empty + ' of ' + WW.fmt(T.images) + ' images had no animal. Rangers never have to open them.' : 'No images in this range.') : ' ' });
+  }
+}
+</script>
+</body>
+</html>

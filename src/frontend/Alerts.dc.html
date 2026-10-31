@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>WildWatch alerts</title>
+<script src="api.js"></script>
+<script src="wildwatch-runtime.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07110D}
+a{color:#F2A93B}a:hover{color:#FFC56B}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,107,91,.6)}70%{box-shadow:0 0 0 14px rgba(255,107,91,0)}100%{box-shadow:0 0 0 0 rgba(255,107,91,0)}}
+@keyframes live{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes drift{0%{transform:translate(0,0);opacity:0}15%{opacity:.95}50%{transform:translate(26px,-38px);opacity:.45}85%{opacity:.9}100%{transform:translate(-14px,-76px);opacity:0}}
+@keyframes aurora{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(140px,50px) scale(1.2)}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes moon{0%,100%{box-shadow:0 0 50px 14px rgba(244,239,216,.22)}50%{box-shadow:0 0 80px 26px rgba(244,239,216,.32)}}
+@keyframes scan{0%{top:0}100%{top:100%}}
+button{transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}
+button:hover{transform:translateY(-2px);filter:brightness(1.1);box-shadow:0 8px 18px rgba(0,0,0,.4)}
+button:active{transform:translateY(0) scale(.96)}
+button:focus-visible,a:focus-visible{outline:2px solid #F2A93B;outline-offset:2px}
+nav a{transition:background .2s ease,color .2s ease,padding-left .2s ease}
+nav a:hover{background:#1A2B25;color:#E8EFEA;padding-left:18px}
+.row{transition:background .2s ease,border-color .2s ease,transform .2s ease}
+.row:hover{transform:translateX(4px);border-color:#3F6B5A}
+.fly{position:absolute;border-radius:50%;background:#F7E27A;box-shadow:0 0 10px 3px rgba(247,226,122,.55);opacity:.75}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.3}
+.shine{background:linear-gradient(90deg,#E8EFEA 40%,#FFD58A 50%,#E8EFEA 60%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+@media (prefers-reduced-motion:no-preference){
+.fly{animation:drift var(--d,9s) ease-in-out infinite}
+.blob{animation:aurora 20s ease-in-out infinite}
+.shine{animation:shimmer 7s linear infinite}
+.moon{animation:moon 5s ease-in-out infinite}
+.pulse{animation:pulse 1.8s ease-out infinite}
+.live{animation:live 1.6s ease-in-out infinite}
+.grow{transform-origin:left center;animation:grow 1s cubic-bezier(.2,.8,.2,1) both}
+.rise{animation:rise .6s ease both}
+.scan{animation:scan 2.6s linear infinite}
+}
+</style>
+</helmet>
+<div style="position: relative; overflow: hidden; min-height: 100vh; background: #07110D; color: #E8EFEA; font-family: Inter, system-ui, sans-serif; display: flex; flex-wrap: wrap; align-items: stretch">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden">
+<div style="position: absolute; left: 0; top: 0; width: 100%; height: 300px; background: linear-gradient(180deg, #14302A 0%, #0C1F19 60%, #07110D 100%)"></div>
+<div class="blob" style="left: 10%; top: -120px; width: 520px; height: 320px; background: #2BB48A"></div>
+<div class="blob" style="left: 55%; top: -80px; width: 460px; height: 280px; background: #5B6CFF; animation-delay: -8s"></div>
+<div class="moon" style="position: absolute; right: 8%; top: 46px; width: 64px; height: 64px; border-radius: 50%; background: #F4EFD8; box-shadow: 0 0 60px 18px rgba(244,239,216,.25)"></div>
+<svg viewBox="0 0 1440 300" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; width: 100%; height: 300px">
+<path ww-d="{{treesFar}}" fill="#0E241C"></path>
+<path ww-d="{{treesNear}}" fill="#07110D"></path>
+</svg>
+<sc-for list="{{flies}}" as="f" hint-placeholder-count="0">
+<div class="fly" style="left: {{f.x}}; top: {{f.y}}; width: {{f.s}}; height: {{f.s}}; --d: {{f.d}}; animation-delay: {{f.delay}}"></div>
+</sc-for>
+</div>
+
+<nav aria-label="Main" style="position: relative; z-index: 1; flex: 1 1 220px; max-width: 100%; background: rgba(8,19,15,0.72); backdrop-filter: blur(12px); border-right: 1px solid #22342D; padding: 24px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 8px">
+<div style="width: 36px; height: 36px; border-radius: 10px; background: #F2A93B; display: flex; align-items: center; justify-content: center">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E1814" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path></svg>
+</div>
+<div style="display: flex; flex-direction: column">
+<span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; letter-spacing: -0.01em">WildWatch</span>
+<span style="font-size: 12px; color: #9DB0A6">Forest division console</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<a href="Main.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Home</a>
+<a href="Upload.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Upload</a>
+<a href="Alerts.dc.html" aria-current="page" style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 12px; border-radius: 8px; background: #1D2F28; color: #E8EFEA; text-decoration: none; font-size: 14px; font-weight: 500">Alerts <span style="background: #FF6B5B; color: #2A0D09; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px">{{alertCount}}</span></a>
+<a href="Analytics.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Analytics</a>
+<a href="Accuracy.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: #B9C8C0; text-decoration: none; font-size: 14px">Model accuracy</a>
+</div>
+<div style="margin-top: auto; background: #172822; border: 1px solid #22342D; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #9DB0A6">Pipeline</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span class="live" style="width: 8px; height: 8px; border-radius: 4px; background: {{pipeColor}}"></span>{{pipeText}}</span>
+<span style="font-size: 12px; color: #9DB0A6">{{lastImage}}</span>
+</div>
+</nav>
+
+<main class="{{mainCls}}" style="position: relative; z-index: 1; flex: 999 1 560px; min-width: 0; padding: 28px 32px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px">
+<sc-if value="{{apiDown}}"><div role="alert" style="background: rgba(52,18,14,0.9); border: 1px solid #7A3329; color: #FBE3DE; border-radius: 12px; padding: 14px 18px; font-size: 14px">Cannot reach the WildWatch server ({{apiError}}). Check that run.ps1 dashboard is still running. Retrying every 10 seconds.</div></sc-if>
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 13px; color: #B9C8C0">Intrusion alerts · Live from the pipeline</span>
+<h1 class="shine" style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 40px; font-weight: 600; letter-spacing: -0.02em">Alerts</h1>
+</div>
+<div role="group" aria-label="Filter by risk" style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{filters}}" as="fl" hint-placeholder-count="6">
+<button type="button" onClick="{{fl.pick}}" aria-pressed="{{fl.pressed}}" style="min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid {{fl.border}}; background: {{fl.bg}}; color: {{fl.fg}}; font: 500 13px Inter, sans-serif; cursor: pointer">{{fl.label}} · {{fl.n}}</button>
+</sc-for>
+</div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+
+<section class="rise" aria-label="Alert list" style="flex: 1 1 460px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{rows}}" as="a" hint-placeholder-count="6">
+<button type="button" class="row" onClick="{{a.pick}}" style="display: grid; grid-template-columns: 92px minmax(0, 1fr) 70px; gap: 12px; align-items: center; text-align: left; width: 100%; min-height: 64px; padding: 10px 12px; border-radius: 10px; border: 1px solid {{a.rowBorder}}; background: {{a.rowBg}}; color: #E8EFEA; font-family: Inter, sans-serif; cursor: pointer">
+<span style="text-align: center; font-size: 11px; font-weight: 600; padding: 4px 0; border-radius: 6px; background: {{a.bg}}; color: {{a.fg}}">{{a.levelLabel}}</span>
+<span style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+<span style="font-size: 14px; font-weight: 500">{{a.title}}</span>
+<span style="font-size: 12px; color: #9DB0A6">Cam {{a.cam}} · {{a.village}} · {{a.statusText}}</span>
+</span>
+<span style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px">{{a.time}}</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9DB0A6">{{a.scoreText}}</span>
+</span>
+</button>
+</sc-for>
+<sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 12px 4px; font-size: 14px; color: #9DB0A6">No alerts at this level right now.</p>
+</sc-if>
+</section>
+
+<section class="rise" aria-label="Alert detail" style="flex: 1 1 420px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; color: #9DB0A6">Cam {{sel.cam}} · {{sel.camName}} · {{sel.village}} · {{sel.coords}} · {{sel.time}} · {{sel.light}}</span>
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600">{{sel.title}}</h2>
+</div>
+<span class="{{sel.pulseCls}}" style="font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 8px; background: {{sel.bg}}; color: {{sel.fg}}">{{sel.levelLabel}}</span>
+</div>
+
+<div style="position: relative; height: 220px; border-radius: 12px; background: #0B1612; border: 1px solid #24392F; overflow: hidden">
+<div class="scan" aria-hidden="true" style="position: absolute; left: 0; width: 100%; height: 2px; background: rgba(95,211,154,0.45); box-shadow: 0 0 12px rgba(95,211,154,0.6)"></div>
+<span style="position: absolute; left: 12px; top: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8FBFA6">CAM {{sel.cam}} · {{sel.light}}</span>
+<span style="position: absolute; right: 12px; top: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8FBFA6">{{sel.time}}</span>
+<sc-if value="{{sel.noImage}}"><span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 13px; color: #6F8A7E">{{sel.imageNote}}</span></sc-if>
+<sc-if value="{{sel.hasImage}}">
+<div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center">
+<div style="position: relative; width: {{sel.frameWidth}}; aspect-ratio: {{sel.aspect}}">
+<img ww-src="{{sel.imageUrl}}" alt="Camera frame for this alert" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block">
+<sc-for list="{{sel.boxes}}" as="b" hint-placeholder-count="1">
+<div style="position: absolute; left: {{b.l}}; top: {{b.t}}; width: {{b.w}}; height: {{b.h}}; border: 2px dashed #F2A93B; border-radius: 4px; box-sizing: border-box"></div>
+<span style="position: absolute; left: {{b.l}}; top: {{b.labelTop}}; font-size: 11px; font-weight: 600; background: #F2A93B; color: #1E1405; padding: 2px 6px; border-radius: 4px; white-space: nowrap">{{b.label}}</span>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 13px; color: #9DB0A6">Danger score</span>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 14px">
+<span style="background: #1A2B25; padding: 6px 10px; border-radius: 8px">{{sel.weight}} <span style="font-family: Inter, sans-serif; font-size: 11px; color: #9DB0A6">species</span></span>×
+<span style="background: #1A2B25; padding: 6px 10px; border-radius: 8px">{{sel.count}} <span style="font-family: Inter, sans-serif; font-size: 11px; color: #9DB0A6">count</span></span>×
+<span style="background: #1A2B25; padding: 6px 10px; border-radius: 8px">{{sel.nightF}} <span style="font-family: Inter, sans-serif; font-size: 11px; color: #9DB0A6">night</span></span>×
+<span style="background: #1A2B25; padding: 6px 10px; border-radius: 8px">{{sel.zone}} <span style="font-family: Inter, sans-serif; font-size: 11px; color: #9DB0A6">zone</span></span>=
+<span style="background: {{sel.bg}}; color: {{sel.fg}}; padding: 6px 12px; border-radius: 8px; font-weight: 500">{{sel.scoreText}}</span>
+</div>
+<div style="height: 8px; border-radius: 4px; background: #1F332B">
+<div class="grow" style="height: 8px; border-radius: 4px; width: {{sel.scoreW}}; background: {{sel.bg}}"></div>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 11px; color: #8A9E94"><span>Low</span><span>Medium {{lvMedium}}</span><span>High {{lvHigh}}</span><span>Critical {{lvCritical}}</span></div>
+</div>
+
+<div style="background: #1A2B25; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #9DB0A6">Recommended response</span>
+<span style="font-size: 16px; font-weight: 500">{{sel.response}}</span>
+</div>
+
+<div style="border: 1px solid #2E453C; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+<span style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #9DB0A6"><span style="width: 8px; height: 8px; border-radius: 4px; background: #B9A3FF"></span>Alert message · {{sel.msgSource}}</span>
+<p style="margin: 0; font-size: 14px; line-height: 1.6; color: #D7E2DC">{{sel.msg}}</p>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+<button type="button" onClick="{{dispatch}}" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: none; background: #FF6B5B; color: #2A0D09; font: 600 14px Inter, sans-serif; cursor: pointer">Dispatch team</button>
+<button type="button" onClick="{{falseAlarm}}" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #2E453C; background: transparent; color: #E8EFEA; font: 500 14px Inter, sans-serif; cursor: pointer">False alarm</button>
+<button type="button" onClick="{{reopen}}" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #2E453C; background: transparent; color: #B9C8C0; font: 500 14px Inter, sans-serif; cursor: pointer">Reopen</button>
+<span style="font-size: 13px; color: {{sel.statusColor}}">{{sel.statusText}}</span>
+</div>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    var m = /[?&]id=(\d+)/.exec(location.search);
+    this.state = { filter: 'ALL', selected: m ? Number(m[1]) : null, data: {}, loaded: false, errs: {} };
+  }
+  componentDidMount() {
+    WW.load(this, { summary: { url: '/api/summary', every: 10000 }, alerts: { url: '/api/alerts', every: 10000 } });
+  }
+  componentWillUnmount() { WW.stop(this); }
+  setStatus(id, status) {
+    var self = this;
+    WW.api('/api/alerts/' + id + '/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status }) })
+      .then(function () { WW.ok(self, 'action'); WW.refresh(self, 'alerts'); WW.refresh(self, 'summary'); })
+      .catch(function (e) { WW.fail(self, 'action', e.message); });
+  }
+  renderVals() {
+    var self = this;
+    var st = this.state || { filter: 'ALL', selected: null, data: {} };
+    var D = st.data || {};
+    var seed = 11;
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    function trees(base, minH, maxH, step) {
+      var d = 'M0 300 L0 ' + base;
+      for (var x = 0; x <= 1440; x += step) {
+        var h = minH + rnd() * (maxH - minH);
+        d += ' L' + (x + step / 2) + ' ' + Math.round(base - h) + ' L' + (x + step) + ' ' + base;
+      }
+      return d + ' L1440 300 Z';
+    }
+    var treesFar = trees(250, 40, 110, 34);
+    var treesNear = trees(285, 30, 90, 26);
+    var flies = [];
+    for (var i = 0; i < 26; i++) {
+      var s = 2 + Math.round(rnd() * 3);
+      flies.push({ x: Math.round(rnd() * 100) + '%', y: Math.round(rnd() * 1100) + 'px', s: s + 'px', d: (7 + rnd() * 8).toFixed(1) + 's', delay: (-rnd() * 12).toFixed(1) + 's' });
+    }
+
+    var STATUS = { new: 'Awaiting action', dispatched: 'Team dispatched', false_alarm: 'Marked false alarm' };
+    var SCOL = { new: '#FFB4A8', dispatched: '#5FD39A', false_alarm: '#9DB0A6' };
+    var raw = D.alerts ? D.alerts.alerts : [];
+    var LVS = (D.alerts && D.alerts.levels) || { CRITICAL: 3, HIGH: 1.5, MEDIUM: 0.5 };
+    var scaleMax = LVS.CRITICAL * 4 / 3;
+    var all = raw.map(function (a) {
+      var c = WW.LV[a.level_label] || WW.LV.LOW;
+      var title = a.title + (a.review ? ' (faint, needs check)' : '');
+      return Object.assign({}, a, c, { levelLabel: a.level_label, cam: a.camera, camName: a.camera_name || 'Unknown camera',
+        coords: a.camera_lat == null ? 'no coordinates' : a.camera_lat.toFixed(4) + ', ' + a.camera_lng.toFixed(4), scoreText: a.score.toFixed(2), nightF: a.night_factor.toFixed(1),
+        light: WW.light(a), title: title, statusText: STATUS[a.status], statusColor: SCOL[a.status],
+        scoreW: Math.min(100, Math.round(a.score / scaleMax * 100)) + '%', msgSource: a.message_source === 'llm' ? 'written by LLM' : 'template text, no LLM key set' });
+    });
+    var f = st.filter;
+    function match(a) { return f === 'ALL' || (f === 'PERSON' ? a.person : a.level === f && !a.person); }
+    var keys = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'PERSON'];
+    var filters = keys.map(function (k) {
+      var n = all.filter(function (a) { return k === 'ALL' || (k === 'PERSON' ? a.person : a.level === k && !a.person); }).length;
+      var on = k === f;
+      return { label: k === 'ALL' ? 'All' : k.charAt(0) + k.slice(1).toLowerCase(), n: n, pressed: on ? 'true' : 'false',
+        bg: on ? '#F2A93B' : 'rgba(20,38,31,0.7)', fg: on ? '#1E1405' : '#C9D6CF', border: on ? '#F2A93B' : '#2E453C',
+        pick: function () { self.setState({ filter: k }); } };
+    });
+    var shown = all.filter(match);
+    var selId = st.selected;
+    var sel0 = all.filter(function (a) { return a.id === selId; })[0] || shown[0];
+    var rows = shown.map(function (a) {
+      var on = sel0 && a.id === sel0.id;
+      return Object.assign({}, a, { rowBg: on ? '#21382F' : '#1A2B25', rowBorder: on ? '#F2A93B' : 'transparent',
+        pick: function () { self.setState({ selected: a.id }); } });
+    });
+    var sel;
+    if (sel0) {
+      var boxes = (sel0.boxes || []).map(function (b) {
+        return { l: (b.x * 100) + '%', t: (b.y * 100) + '%', w: (b.w * 100) + '%', h: (b.h * 100) + '%',
+          labelTop: b.y > 0.1 ? 'calc(' + (b.y * 100) + '% - 22px)' : (b.y * 100) + '%', label: b.label + ' ' + Math.round(b.conf * 100) + '%' };
+      });
+      var ar = sel0.image_w && sel0.image_h ? sel0.image_w / sel0.image_h : 1.5;
+      sel = Object.assign({}, sel0, { pulseCls: sel0.status === 'new' && (sel0.level === 'HIGH' || sel0.level === 'CRITICAL') ? 'pulse' : '',
+        hasImage: true, noImage: false, imageUrl: sel0.image_url, boxes: boxes, aspect: ar.toFixed(4), frameWidth: 'min(100%, ' + Math.round(220 * ar) + 'px)' });
+    } else {
+      sel = { cam: '—', camName: '—', coords: '—', village: '—', time: '—', light: '—', title: D.alerts ? 'No alerts yet' : 'Loading…', levelLabel: '—', bg: '#24392F', fg: '#C9D6CF',
+        pulseCls: '', species: '—', weight: '—', count: '—', nightF: '—', zone: '—', scoreText: '—', scoreW: '0%', response: '—',
+        msg: 'Upload a photo or drop files into data/incoming/ and alerts will appear here.', message: '', msgSource: '—',
+        statusText: '', statusColor: '#9DB0A6', hasImage: false, noImage: true, imageNote: 'No frame yet', boxes: [] };
+    }
+    sel.msg = sel.message || sel.msg;
+    var open = D.summary ? D.summary.active_alerts : (D.alerts ? D.alerts.open_count : '–');
+    return Object.assign(WW.shell(st), { treesFar: treesFar, treesNear: treesNear, flies: flies, filters: filters, rows: rows,
+      empty: !!D.alerts && rows.length === 0, sel: sel, lvMedium: LVS.MEDIUM, lvHigh: LVS.HIGH, lvCritical: LVS.CRITICAL, openCount: open,
+      dispatch: function () { if (sel0) self.setStatus(sel0.id, 'dispatched'); },
+      falseAlarm: function () { if (sel0) self.setStatus(sel0.id, 'false_alarm'); },
+      reopen: function () { if (sel0) self.setStatus(sel0.id, 'new'); } });
+  }
+}
+</script>
+</body>
+</html>
