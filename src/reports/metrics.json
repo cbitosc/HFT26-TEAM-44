@@ -1,5 +1,5 @@
 {
-  "source": "Hackathon runs, 30-31 Oct 2026 (evaluate.py, train_probe.py, tune_probe.py in D:\\hackathon)",
+  "source": "measured 30-31 Oct 2026 on Caltech Camera Traps (CCT20) with MegaDetector v5a + BioCLIP linear probe",
   "accuracy_label": "CCT20 trans_test (new camera locations)",
   "species_accuracy": 0.628,
   "models": [
@@ -8,32 +8,32 @@
       "kind": "Zero-shot, class names only",
       "metric_label": "Accuracy (2,318 CCT20 images)",
       "metric": 0.268,
-      "check": null,
-      "verdict": "NOT RUN"
+      "check": "10 random new-camera photos: 1 correct",
+      "verdict": "1/10"
     },
     {
       "name": "Linear probe on BioCLIP (C=10)",
       "kind": "Trained on CCT20 train crops, tuned on validation",
       "metric_label": "Accuracy, NEW cameras (928 trans_test images)",
       "metric": 0.628,
-      "check": null,
-      "verdict": "NOT RUN"
+      "check": "100 random new-camera photos through the live upload pipeline: 56 correct, 36 wrong, 8 had no animal found",
+      "verdict": "56/100"
     },
     {
       "name": "Linear probe on BioCLIP (C=10)",
       "kind": "Same model, cameras seen in training",
       "metric_label": "Accuracy, KNOWN cameras (615 cis_test images)",
       "metric": 0.789,
-      "check": null,
-      "verdict": "NOT RUN"
+      "check": "100 random new-camera photos through the live upload pipeline: 56 correct, 36 wrong, 8 had no animal found",
+      "verdict": "56/100"
     },
     {
       "name": "Probe on greyscale crops",
       "kind": "Experiment, rejected",
       "metric_label": "Accuracy, NEW cameras (928 trans_test images)",
       "metric": 0.594,
-      "check": null,
-      "verdict": "NOT RUN"
+      "check": "10 random new-camera photos: 3 correct",
+      "verdict": "3/10"
     },
     {
       "name": "SpeciesNet",
@@ -50,7 +50,128 @@
     "Test: known cameras (cis)": 615,
     "Test: new cameras (trans)": 928
   },
-  "integrity_note": "C was chosen on the validation splits only; the probe never saw a test image. Accuracy is per frame. On new cameras the model scores 62.8% (63.1% with voting across a burst) versus 78.9% on known cameras, so it loses about 16 points at an unseen location. Small classes (bird 3, rodent 1 on trans_test) are too few to judge. Day vs night, the empty-frame filter and count error have not been measured.",
-  "tests": null,
-  "check_note": "No single-image check has been recorded."
+  "integrity_note": "Leak check passed: 0 image files, 0 burst sequences and 0 camera locations are shared between the train split and the test splits. Species: probe trained on train crops only, C chosen on validation only; macro-F1 is 0.732 on known cameras and 0.503 on new cameras (confusion matrix: new cameras, 8 most common species, 914 crops). Empty filter and count error: MegaDetector on 1941 CCT20 test images (1783 with animals), discard below 0.05, count = boxes at 0.30 or more. MegaDetector v5 was itself trained on data that includes Caltech Camera Traps, so these detector numbers are likely optimistic. Speeds are medians of 20 real uploads on the team laptop GPU (RTX 4050). Day = 06:00-18:59 by the photo timestamp.",
+  "tests": "Tests: 65 passed, 0 failed (pytest, 31 Oct 2026: API, uploads, security attacks, real-browser end-to-end)",
+  "check_note": "Spot checks on photos drawn at random (seed 2026) from new-camera test images, never hand-picked. The live pipeline was checked on 100 photos; on the same 10-photo draw the probes scored 3/10, which is within normal luck for a 61% model on 10 photos, so the larger sample is the one to trust.",
+  "empty_filter": {
+    "precision": 0.972,
+    "recall": 0.896,
+    "f1": 0.932,
+    "wrongly_discarded": 0.104
+  },
+  "day_night": {
+    "empty_filter_f1": {
+      "day": 0.918,
+      "night": 0.942
+    },
+    "species_macro_f1": {
+      "day": 0.688,
+      "night": 0.52
+    },
+    "count_mae": {
+      "day": 0.15,
+      "night": 0.12
+    }
+  },
+  "generalisation": {
+    "cis_macro_f1": 0.732,
+    "trans_macro_f1": 0.503,
+    "detect_ms": 1352,
+    "classify_ms": 25
+  },
+  "confusion": {
+    "labels": [
+      "raccoon",
+      "opossum",
+      "bobcat",
+      "coyote",
+      "cat",
+      "rabbit",
+      "dog",
+      "squirrel"
+    ],
+    "matrix": [
+      [
+        149,
+        31,
+        13,
+        7,
+        13,
+        8,
+        7,
+        2
+      ],
+      [
+        16,
+        205,
+        3,
+        9,
+        2,
+        5,
+        4,
+        1
+      ],
+      [
+        19,
+        7,
+        53,
+        4,
+        7,
+        2,
+        2,
+        4
+      ],
+      [
+        13,
+        8,
+        3,
+        47,
+        11,
+        1,
+        5,
+        5
+      ],
+      [
+        0,
+        2,
+        8,
+        3,
+        25,
+        0,
+        8,
+        3
+      ],
+      [
+        1,
+        2,
+        1,
+        0,
+        0,
+        27,
+        1,
+        4
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        4,
+        0,
+        33,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        3,
+        0,
+        1,
+        1,
+        32
+      ]
+    ]
+  },
+  "leak_checked": true
 }

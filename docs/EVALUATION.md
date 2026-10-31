@@ -20,14 +20,19 @@ came from `train_probe.py`; it is kept for history but the split numbers above r
 Weak spots on new cameras: raccoon (56%) is confused with opossum, skunk and rodent; bobcat 53%, coyote 50%, cat 42%.
 Bird and rodent have 3 and 1 test images on trans_test, too few to judge.
 
-## Not measured yet (the dashboard says so)
-* Macro-F1 (only accuracy was measured), so the cis/trans macro-F1 tiles stay empty
-* Day vs night accuracy
-* Empty-frame filter precision / recall, and how many real animals it discards
-* Count error
-* SpeciesNet comparison
+## Measured 31 Oct 2026 (shown on the Model accuracy page)
+| Metric | All | Day | Night |
+|---|---|---|---|
+| Empty filter F1 (MegaDetector, discard below 0.05; 1,941 test images) | 0.932 (P 0.972, R 0.896) | 0.918 | 0.942 |
+| Animals wrongly discarded as empty | 10.4% | | |
+| Species macro-F1, test splits | | 0.688 | 0.520 |
+| Count error (MAE, boxes >= 0.30 vs labelled animals) | | 0.15 | 0.12 |
 
-These fields are `null` in `src/reports/metrics.json`. Fill them in there once measured and the Model accuracy page updates.
+Macro-F1: 0.732 known cameras, 0.503 new cameras. Speeds (median of 20 real uploads, RTX 4050): detection 1,352 ms, classification 25 ms.
+Leak check: 0 files, 0 sequences and 0 locations shared between train and test.
+Caveat: MegaDetector v5 was trained on data including Caltech Camera Traps, so the detector numbers are likely optimistic.
+Spot checks (random new-camera photos, seed 2026): live upload pipeline 56/100 correct (8 with no animal found); on a 10-photo draw the probe and greyscale probe scored 3/10 and zero-shot 1/10.
+Still not measured: SpeciesNet.
 
 ## Upload-path check on new images (31 Oct 2026)
 Real MegaDetector + BioCLIP + probe, run through `src/backend/pipeline.py` on 100 unseen trans_test images (`src/ml/diagnose_new_images.py`).

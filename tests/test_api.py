@@ -89,7 +89,12 @@ def test_accuracy_reports_real_and_null(client, tmp_path):
     a = client.get("/api/accuracy").json()
     m = json.load(open(client.app.state.cfg["paths"]["reports"] + "/metrics.json"))
     assert a["species_accuracy"] == m["species_accuracy"] and a["evaluated"] is True
-    assert a["empty_filter"] is None and a["day_night"] is None and a["confusion"] is None and a["generalisation"] is None
+    for k in ("empty_filter", "day_night", "confusion", "generalisation", "leak_checked", "check_note", "integrity_note"):
+        assert a[k] == m[k], k                                     # the page shows exactly what metrics.json holds
+    for v in list(a["empty_filter"].values()) + [a["generalisation"]["cis_macro_f1"], a["generalisation"]["trans_macro_f1"]]:
+        assert 0 <= v <= 1
+    cm = a["confusion"]
+    assert len(cm["labels"]) == len(cm["matrix"]) and all(len(r) == len(cm["labels"]) for r in cm["matrix"])
     assert any(x["metric"] is None for x in a["models"])           # SpeciesNet was never run
 
 
