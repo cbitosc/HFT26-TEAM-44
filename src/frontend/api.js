@@ -12,7 +12,7 @@
   WW.LV = {
     CRITICAL: { bg: '#FF3D6E', fg: '#2B0612' }, HIGH: { bg: '#FF6B5B', fg: '#2A0D09' },
     MEDIUM: { bg: '#F2A93B', fg: '#1E1405' }, LOW: { bg: '#3E5A4F', fg: '#E8EFEA' },
-    POACHER: { bg: '#B9A3FF', fg: '#1B1240' }, EMPTY: { bg: '#24392F', fg: '#C9D6CF' }, REVIEW: { bg: '#5B6CFF', fg: '#FFFFFF' }
+    PERSON: { bg: '#B9A3FF', fg: '#1B1240' }, EMPTY: { bg: '#24392F', fg: '#C9D6CF' }, REVIEW: { bg: '#5B6CFF', fg: '#FFFFFF' }
   };
   WW.fmt = function (x) { return String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
   WW.pct = function (v) { return v == null ? 'Not measured' : (Math.round(v * 1000) / 10) + '%'; };

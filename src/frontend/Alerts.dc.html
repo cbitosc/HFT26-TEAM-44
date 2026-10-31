@@ -238,10 +238,10 @@ class Component extends DCLogic {
         scoreW: Math.min(100, Math.round(a.score / scaleMax * 100)) + '%', msgSource: a.message_source === 'llm' ? 'written by LLM' : 'template text, no LLM key set' });
     });
     var f = st.filter;
-    function match(a) { return f === 'ALL' || (f === 'POACHER' ? a.person : a.level === f && !a.person); }
-    var keys = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'POACHER'];
+    function match(a) { return f === 'ALL' || (f === 'PERSON' ? a.person : a.level === f && !a.person); }
+    var keys = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'PERSON'];
     var filters = keys.map(function (k) {
-      var n = all.filter(function (a) { return k === 'ALL' || (k === 'POACHER' ? a.person : a.level === k && !a.person); }).length;
+      var n = all.filter(function (a) { return k === 'ALL' || (k === 'PERSON' ? a.person : a.level === k && !a.person); }).length;
       var on = k === f;
       return { label: k === 'ALL' ? 'All' : k.charAt(0) + k.slice(1).toLowerCase(), n: n, pressed: on ? 'true' : 'false',
         bg: on ? '#F2A93B' : 'rgba(20,38,31,0.7)', fg: on ? '#1E1405' : '#C9D6CF', border: on ? '#F2A93B' : '#2E453C',

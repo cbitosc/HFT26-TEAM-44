@@ -285,7 +285,7 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
                     (image_id, jid, alert["species"], a["count"], alert["camera_id"], alert["village"], when, night, a["weight"],
                      a["zone"], a["night_factor"], a["score"], a["level"], int(person), int(outcome == "review"), a["response"],
                      text, src, "new", now_s()))
-                summary.update(species=alert["species"], species_label=risk.plural(alert["species"], a["count"]), count=a["count"], level="POACHER" if person else a["level"],
+                summary.update(species=alert["species"], species_label=risk.plural(alert["species"], a["count"]), count=a["count"], level="PERSON" if person else a["level"],
                                response=a["response"], village=alert["village"], review=outcome == "review")
             summary.update(detector_ms=res.get("detector_ms"), classifier_ms=res.get("classifier_ms"), device=res.get("device"),
                            top_conf=max([d["conf"] for d in res.get("detections", [])], default=None),
@@ -353,7 +353,7 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
 
     # --------------------------------------------------------------------------------- helpers
     def level_label(r):
-        return "POACHER" if r["person"] else r["level"]
+        return "PERSON" if r["person"] else r["level"]
 
     def alert_out(r):
         boxes = []
@@ -425,7 +425,7 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
     def alerts(level: str = Query("ALL")):
         rows = db.q("SELECT * FROM alerts ORDER BY captured_at DESC, id DESC")
         lv = level.upper()
-        if lv == "POACHER":
+        if lv in ("PERSON", "POACHER"):              # POACHER kept as an alias for old links
             rows = [r for r in rows if r["person"]]
         elif lv != "ALL":
             rows = [r for r in rows if r["level"] == lv and not r["person"]]
@@ -448,7 +448,7 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
             if r["outcome"] == "empty":
                 text, color = f"Cam {cam} · Empty frame filtered", "#4E6B5F"
             elif r["person"]:
-                text, color = f"Cam {cam} · Person detected · POACHER CHECK", "#B9A3FF"
+                text, color = f"Cam {cam} · Person detected · VERIFY", "#B9A3FF"
             elif r["species"]:
                 text = f"Cam {cam} · {r['count']} {risk.plural(r['species'], r['count'])} · {r['level']}"
                 color = {"CRITICAL": "#FF3D6E", "HIGH": "#FF6B5B", "MEDIUM": "#F2A93B", "LOW": "#5FD39A"}[r["level"]]

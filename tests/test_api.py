@@ -34,7 +34,9 @@ def test_alerts_shape_and_values(seeded):
     assert coy["score"] == round(0.6 * 3 * 1.5 * 1.0, 2) == 2.7 and coy["level"] == "HIGH"
     assert coy["message_source"] == "template" and len(coy["boxes"]) == 3
     assert by["raccoon"]["level"] == "LOW"
-    assert by["person"]["level_label"] == "POACHER" and by["person"]["level"] in ("HIGH", "CRITICAL")
+    assert by["person"]["level_label"] == "PERSON" and by["person"]["level"] in ("HIGH", "CRITICAL")
+    msg = (by["person"]["message"] + " " + by["person"]["title"]).lower()
+    assert "poacher" not in msg and "staff" in msg       # a person is never accused: it may be a ranger
     assert seeded.get(coy["image_url"]).status_code == 200
 
 
@@ -46,7 +48,8 @@ def test_faint_detection_still_raises_an_alert(seeded):
 def test_alert_level_filter(seeded):
     high = seeded.get("/api/alerts?level=HIGH").json()["alerts"]
     assert high and all(a["level"] == "HIGH" and not a["person"] for a in high)
-    assert [a["species"] for a in seeded.get("/api/alerts?level=POACHER").json()["alerts"]] == ["person"]
+    assert [a["species"] for a in seeded.get("/api/alerts?level=PERSON").json()["alerts"]] == ["person"]
+    assert [a["species"] for a in seeded.get("/api/alerts?level=POACHER").json()["alerts"]] == ["person"]   # old alias still works
     assert len(seeded.get("/api/alerts?level=ALL").json()["alerts"]) == 4
 
 

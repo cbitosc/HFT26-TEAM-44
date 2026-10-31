@@ -28,3 +28,15 @@ Bird and rodent have 3 and 1 test images on trans_test, too few to judge.
 * SpeciesNet comparison
 
 These fields are `null` in `src/reports/metrics.json`. Fill them in there once measured and the Model accuracy page updates.
+
+## Upload-path check on new images (31 Oct 2026)
+Real MegaDetector + BioCLIP + probe, run through `src/backend/pipeline.py` on 100 unseen trans_test images (`src/ml/diagnose_new_images.py`).
+* Bug found and fixed: uploads used tight single crops while the probe was trained on 10%-padded crops averaged with their mirror.
+  On the 92 images with an animal box the upload path scored **41.3%**; with training-style crops (now the upload path) **60.9%**.
+  `tests/test_pipeline_crops.py` keeps the two in sync.
+* 8 of 100 images had no animal box at all (5 raccoon, 2 opossum, 1 squirrel).
+* The probe only knows 14 CCT species: anything else (e.g. cheetah) is forced into the nearest CCT label.
+
+## Known limits
+* A motion-blurred person can be missed entirely by MegaDetector (no person box even at threshold 0.001 on a real CCT frame).
+* A detected person is labelled **PERSON – verify**, never "poacher": the model cannot tell a ranger from an intruder.

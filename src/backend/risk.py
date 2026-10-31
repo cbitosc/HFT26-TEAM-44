@@ -30,15 +30,15 @@ def plural(species, count):
 
 def title(a):
     if a["person"]:
-        return "Person detected · possible poacher"
+        return "Person detected · verify: staff or intruder?"
     return f"{a['count']} {plural(a['species'], a['count'])} near {a['village']}"
 
 
 def template_message(a):
     when = a["captured_at"][11:16]
     if a["person"]:
-        return (f"Possible poacher: a person was detected at Cam {a['camera_id']} ({a['village']}) at {when}"
-                f"{' in IR night mode' if a['night'] else ''}. Send {a['response'].lower()} and approach with caution.")
+        return (f"Person detected at Cam {a['camera_id']} ({a['village']}) at {when}"
+                f"{' in IR night mode' if a['night'] else ''}. Check whether this is staff on patrol; if not, send {a['response'].lower()} and approach with caution.")
     review = " This was a faint detection and needs a quick human check." if a.get("review") else ""
     return (f"Alert for {a['village']}: at least {a['count']} {plural(a['species'], a['count'])} seen at Cam {a['camera_id']} "
             f"at {when}{' (night)' if a['night'] else ''}. Risk is {a['level']}. Recommended: {a['response'].lower()}.{review}")

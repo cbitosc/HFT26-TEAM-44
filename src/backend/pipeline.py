@@ -19,6 +19,20 @@ class PipelineUnavailable(RuntimeError):
     pass
 
 
+CROP_PAD = 0.10      # MUST match tune_probe.py: the probe was trained on 10%-padded crops averaged with their mirror image
+
+
+def crop_views(img, bbox, pad=CROP_PAD):
+    """The exact crops the species probe was trained on: the box padded by `pad` on each side, plus its mirror image."""
+    W, H = img.size
+    x, y, w, h = bbox
+    box = (max(0, int((x - pad * w) * W)), max(0, int((y - pad * h) * H)),
+           min(W, int((x + w * (1 + pad)) * W)), min(H, int((y + h * (1 + pad)) * H)))
+    box = (box[0], box[1], max(box[0] + 1, box[2]), max(box[1] + 1, box[3]))
+    crop = img.crop(box)
+    return [crop, crop.transpose(Image.FLIP_LEFT_RIGHT)]
+
+
 class RealPipeline:
     def __init__(self, cfg):
         self.cfg = cfg["pipeline"]
@@ -51,6 +65,16 @@ class RealPipeline:
             self._ready = True
 
     # ---- running -------------------------------------------------------------------------------
+    def classify_box(self, img, bbox):
+        """Probe probabilities for one box, using the same crop + mirror averaging as training."""
+        views = crop_views(img, bbox)
+        with self.torch.no_grad():
+            f = self.clip.encode_image(self.torch.stack([self.preprocess(v) for v in views]).to(self.device))
+            f = f / f.norm(dim=-1, keepdim=True)
+            f = f.mean(0)
+            f = f / f.norm()
+        return self.probe.predict_proba(f.cpu().numpy().reshape(1, -1))[0]
+
     def run(self, path, on_stage=lambda s: None):
         self.load()
         c = self.cfg
@@ -80,12 +104,7 @@ class RealPipeline:
         to_classify = confident or sorted(animals, key=lambda d: -d["conf"])[:1]
         votes = {}
         for d in to_classify:
-            x, y, w, h = d["bbox"]
-            crop = img.crop((int(x * W), int(y * H), max(int(x * W) + 1, int((x + w) * W)), max(int(y * H) + 1, int((y + h) * H))))
-            with self.torch.no_grad():
-                f = self.clip.encode_image(self.preprocess(crop).unsqueeze(0).to(self.device))
-                f = f / f.norm(dim=-1, keepdim=True)
-            prob = self.probe.predict_proba(f[0].cpu().numpy().reshape(1, -1))[0]
+            prob = self.classify_box(img, d["bbox"])
             k = int(prob.argmax())
             d["species"], d["species_conf"] = str(self.probe.classes_[k]), float(prob[k])
             for cls, p in zip(self.probe.classes_, prob):          # confidence-weighted vote across boxes
