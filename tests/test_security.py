@@ -78,10 +78,12 @@ def test_sql_injection_attempts_do_nothing(seeded):
 
 
 def test_camera_id_is_sanitised(client):
+    """A script in the camera field is cleaned, then refused because no such camera is registered: nothing is stored."""
     r = upload(client, "a.jpg", make_jpeg(), "46<script>alert(1)</script>'--", "2026-10-30T02:14")
-    assert r.status_code == 200
-    wait_jobs(client, [r.json()["jobs"][0]["job_id"]])
-    for t in ("jobs", "images", "alerts"):
+    assert r.status_code == 422 and "not registered" in r.json()["error"]
+    assert not any(ch in r.text for ch in "<>'")
+    assert sql(client, "SELECT COUNT(*) n FROM jobs")[0]["n"] == 0
+    for t in ("jobs", "images", "alerts", "cameras"):
         for row in sql(client, f"SELECT camera_id FROM {t}"):
             assert not any(ch in (row["camera_id"] or "") for ch in "<>'\"; ")
 

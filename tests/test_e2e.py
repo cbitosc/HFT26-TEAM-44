@@ -134,7 +134,8 @@ def test_upload_rejects_bad_files_with_clear_message(live, browser, tmp_path):
     errors = []
     page = new_page(browser, errors)
     page.goto(base + "/Upload.dc.html")
-    page.wait_for_selector("select#cam option", state="attached")
+    page.wait_for_selector("select#cam option[value='46']", state="attached")
+    page.select_option("select#cam", "46")
     page.set_input_files("input[type=file]", str(bad))
     page.wait_for_selector("text=0 bytes", timeout=10000)
     page.set_input_files("input[type=file]", str(txt))
@@ -205,3 +206,72 @@ def test_response_headers_lock_the_pages_down(live):
     assert r.headers["x-frame-options"] == "DENY" and "frame-ancestors 'none'" in r.headers["content-security-policy"]
     assert requests.get(base + "/api/summary", headers={"Host": "evil.example.com"}).status_code == 400
     assert requests.post(base + "/api/upload", headers={"Origin": "http://evil.example.com"}).status_code == 403
+
+
+def test_add_camera_in_form_then_upload_and_alert_show_it(live, browser, tmp_path):
+    """Analytics form -> camera in Upload dropdown -> picked from a CAM53_ file name -> alert shows its name, village and coordinates."""
+    base, _ = live
+    errors = []
+    page = new_page(browser, errors)
+    page.goto(base + "/Analytics.dc.html")
+    page.wait_for_selector("#nc-zone option[value='village']", state="attached")
+    page.click("#nc-add")                                              # empty form: inline errors, nothing sent
+    assert "Camera ID is required" in page.locator("#nc-id-err").inner_text()
+    assert "Village is required" in page.locator("#nc-village-err").inner_text()
+    page.fill("#nc-id", "53"); page.fill("#nc-name", "Lake road"); page.fill("#nc-lat", "17.3850"); page.fill("#nc-lng", "78.4867")
+    page.fill("#nc-village", "Gandipet"); page.select_option("#nc-zone", "village")
+    page.click("#nc-add")
+    page.wait_for_selector("text=Camera 53 added")
+    page.goto(base + "/Upload.dc.html")
+    page.wait_for_selector("select#cam option[value='53']", state="attached")
+    assert "Gandipet" in page.locator("select#cam option[value='53']").inner_text()
+    plain = tmp_path / "photo_coyote.jpg"; plain.write_bytes(make_jpeg())
+    page.set_input_files("input[type=file]", str(plain))              # no camera chosen, none in the name: blocked
+    page.wait_for_selector("text=Choose a camera first")
+    f = tmp_path / "CAM53_coyote.jpg"; f.write_bytes(make_jpeg())
+    page.set_input_files("input[type=file]", str(f))                  # camera picked from the file name
+    assert page.locator("select#cam").input_value() == "53"
+    card = page.locator("div.rise", has_text="CAM53_coyote.jpg").filter(has=page.locator("a.btn")).last
+    card.wait_for(timeout=15000)
+    card.locator("a.btn").click()
+    page.wait_for_selector("text=Lake road")
+    body = page.inner_text("body")
+    assert "Gandipet" in body and "17.3850, 78.4867" in body
+    assert not [e for e in errors if "409" not in e and "422" not in e], errors
+    page.close()
+
+
+def test_folder_upload_batches_and_tracks_show_on_map(live, browser, tmp_path):
+    """A folder with camera subfolders (27 photos + a text file) is sent in batches of 20; each photo gets its folder's camera."""
+    import requests
+    base, _ = live
+    trip = tmp_path / "sd_card"
+    for cam, n in (("cam61", 25), ("cam38", 2)):
+        (trip / cam).mkdir(parents=True)
+        for i in range(n):
+            (trip / cam / f"IMG_{i:04d}_coyote.jpg").write_bytes(make_jpeg(size=(64, 48)))
+    (trip / "readme.txt").write_text("not a photo")
+    before = len(requests.get(base + "/api/jobs?limit=200").json()["jobs"])
+    errors = []
+    page = new_page(browser, errors)
+    page.goto(base + "/Upload.dc.html")
+    page.wait_for_selector("select#cam option[value='61']", state="attached")
+    page.set_input_files("#folder", str(trip))                        # the "Upload a whole folder" button
+    page.wait_for_selector("text=27 photos sent", timeout=20000)
+    jobs = requests.get(base + "/api/jobs?limit=200").json()["jobs"][: 27]
+    assert len(requests.get(base + "/api/jobs?limit=200").json()["jobs"]) - before == 27
+    by = {}
+    for j in jobs:
+        by[j["camera_id"]] = by.get(j["camera_id"], 0) + 1
+    assert by == {"61": 25, "38": 2}
+    ids = [j["id"] for j in jobs]
+    end = time.time() + 20
+    while time.time() < end and not all(requests.get(f"{base}/api/jobs/{i}").json()["state"] == "done" for i in ids):
+        time.sleep(0.3)
+    page.goto(base + "/Main.dc.html")
+    page.wait_for_selector("svg[aria-label='Movement tracks'] polyline", state="attached", timeout=15000)
+    assert "Movement: Coyote" in page.inner_text("body")
+    page.goto(base + "/Analytics.dc.html")
+    page.wait_for_selector("section[aria-label='Movement tracks'] >> text=Coyote", timeout=15000)
+    assert not [e for e in errors if "409" not in e and "422" not in e], errors
+    page.close()

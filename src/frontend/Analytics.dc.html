@@ -222,7 +222,7 @@ main section:hover{border-color:#3A564B}
 <section class="rise" aria-label="Per-camera stats" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
 <div style="display: flex; justify-content: space-between; align-items: center">
 <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Cameras</h2>
-<span style="font-size: 12px; color: #9DB0A6">Zones and villages from config.yaml</span>
+<span style="font-size: 12px; color: #9DB0A6">Zones and villages from the camera registry</span>
 </div>
 <div style="overflow-x: auto">
 <div role="table" aria-label="Per-camera stats" style="min-width: 720px; font-size: 14px">
@@ -250,6 +250,100 @@ main section:hover{border-color:#3A564B}
 </div>
 </section>
 
+<section class="rise" aria-label="Movement tracks" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Movement tracks</h2>
+<span style="font-size: 12px; color: #9DB0A6">{{trackNote}}</span>
+</div>
+<sc-if value="{{noTracks}}"><span style="font-size: 14px; color: #9DB0A6">No species was seen at two different cameras within the time window yet.</span></sc-if>
+<sc-for list="{{tracks}}" as="t" hint-placeholder-count="2">
+<div class="trow" style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; border: 1px solid #22342D">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: {{t.bg}}; color: {{t.fg}}">{{t.level}}</span>
+<span style="font-weight: 600">{{t.species}}</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #E8EFEA">{{t.route}}</span>
+<span style="font-size: 13px; color: #9DB0A6">{{t.meta}}</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{t.stops}}" as="s" hint-placeholder-count="2"><span style="font-size: 12px; padding: 4px 8px; border-radius: 6px; background: #13221C; color: #C9D6CF">{{s.text}}</span></sc-for>
+</div>
+</div>
+</sc-for>
+</section>
+
+<section class="rise" aria-label="Camera registry" style="background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px">
+<h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Camera registry</h2>
+<span style="font-size: 12px; color: #9DB0A6">{{regNote}}</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+<div aria-label="Add camera" style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 14px; background: #13221C; border: 1px solid #24392F; border-radius: 12px; padding: 16px">
+<h3 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600">Add camera</h3>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-id" style="font-size: 13px; color: #B9C8C0">Camera ID</label>
+<input id="nc-id" type="text" placeholder="e.g. 52" autocomplete="off" aria-describedby="nc-id-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.camera_idBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<sc-if value="{{camForm.camera_idBad}}"><span id="nc-id-err" style="font-size: 12px; color: #FFB4A8">{{camForm.camera_idErr}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-name" style="font-size: 13px; color: #B9C8C0">Name</label>
+<input id="nc-name" type="text" placeholder="e.g. River crossing" aria-describedby="nc-name-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.nameBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<sc-if value="{{camForm.nameBad}}"><span id="nc-name-err" style="font-size: 12px; color: #FFB4A8">{{camForm.nameErr}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-lat" style="font-size: 13px; color: #B9C8C0">Latitude (-90 to 90)</label>
+<input id="nc-lat" type="text" inputmode="decimal" placeholder="17.3850" aria-describedby="nc-lat-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.latitudeBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<sc-if value="{{camForm.latitudeBad}}"><span id="nc-lat-err" style="font-size: 12px; color: #FFB4A8">{{camForm.latitudeErr}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-lng" style="font-size: 13px; color: #B9C8C0">Longitude (-180 to 180)</label>
+<input id="nc-lng" type="text" inputmode="decimal" placeholder="78.4867" aria-describedby="nc-lng-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.longitudeBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<sc-if value="{{camForm.longitudeBad}}"><span id="nc-lng-err" style="font-size: 12px; color: #FFB4A8">{{camForm.longitudeErr}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-village" style="font-size: 13px; color: #B9C8C0">Village</label>
+<input id="nc-village" type="text" placeholder="e.g. Rampur" aria-describedby="nc-village-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.villageBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<sc-if value="{{camForm.villageBad}}"><span id="nc-village-err" style="font-size: 12px; color: #FFB4A8">{{camForm.villageErr}}</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="nc-zone" style="font-size: 13px; color: #B9C8C0">Zone type</label>
+<select id="nc-zone" aria-describedby="nc-zone-err" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid {{camForm.zone_typeBorder}}; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<option value="">Choose a zone type…</option>
+<sc-for list="{{zoneOptions}}" as="z" hint-placeholder-count="6"><option value="{{z.id}}">{{z.label}}</option></sc-for>
+</select>
+<sc-if value="{{camForm.zone_typeBad}}"><span id="nc-zone-err" style="font-size: 12px; color: #FFB4A8">{{camForm.zone_typeErr}}</span></sc-if>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<button type="button" id="nc-add" onClick="{{addCamera}}" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: none; background: #F2A93B; color: #1E1405; font: 600 14px Inter, sans-serif; cursor: pointer">{{addLabel}}</button>
+<span role="status" style="font-size: 13px; color: {{camForm.msgColor}}">{{camForm.msg}}</span>
+</div>
+<span style="font-size: 12px; color: #9DB0A6">The zone type sets the risk multiplier. Multipliers are our team's choices, kept in config.yaml.</span>
+</div>
+<div style="flex: 1 1 420px; min-width: 0; overflow-x: auto">
+<div role="table" aria-label="Registered cameras" style="min-width: 520px; font-size: 14px">
+<div role="row" style="display: grid; grid-template-columns: 70px minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1.3fr) 96px; color: #9DB0A6; font-size: 12px">
+<span role="columnheader" style="padding: 8px 10px">Camera</span>
+<span role="columnheader" style="padding: 8px 10px">Name · village</span>
+<span role="columnheader" style="padding: 8px 10px">Zone</span>
+<span role="columnheader" style="padding: 8px 10px">Coordinates</span>
+<span role="columnheader" style="padding: 8px 10px">Status</span>
+</div>
+<sc-for list="{{reg}}" as="c" hint-placeholder-count="6">
+<div role="row" class="trow" style="display: grid; grid-template-columns: 70px minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1.3fr) 96px; align-items: center; border-top: 1px solid #22342D; opacity: {{c.op}}">
+<span role="cell" style="padding: 10px; font-family: 'JetBrains Mono', monospace">{{c.id}}</span>
+<span role="cell" style="padding: 10px">{{c.name}}<br><span style="font-size: 12px; color: #9DB0A6">{{c.village}}</span></span>
+<span role="cell" style="padding: 10px; font-size: 13px">{{c.zone}}</span>
+<span role="cell" style="padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #B9C8C0">{{c.coords}}</span>
+<span role="cell" style="padding: 10px"><button type="button" onClick="{{c.toggle}}" title="{{c.toggleTitle}}" style="min-height: 34px; padding: 0 10px; border-radius: 6px; border: 1px solid #2E453C; background: transparent; color: {{c.fg}}; font: 500 12px Inter, sans-serif; cursor: pointer">{{c.toggleLabel}}</button></span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</section>
+
+
 </main>
 </div>
 </x-dc>
@@ -257,13 +351,43 @@ main section:hover{border-color:#3A564B}
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { range: '14d', data: {}, loaded: false, errs: {} };
+    this.state = { range: '14d', data: {}, loaded: false, errs: {}, camErr: {}, camMsg: '', camOk: true, saving: false };
   }
   componentDidMount() {
     WW.load(this, { summary: { url: '/api/summary', every: 10000 },
-      analytics: { url: function (c) { return '/api/analytics?range=' + c.state.range; }, every: 30000 } });
+      analytics: { url: function (c) { return '/api/analytics?range=' + c.state.range; }, every: 30000 },
+      cameras: { url: '/api/cameras', every: 30000 },
+      tracks: { url: function (c) { return '/api/tracks?range=' + c.state.range; }, every: 30000 } });
   }
   componentWillUnmount() { WW.stop(this); }
+  addCamera() {
+    var self = this, v = function (id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; };
+    var body = { camera_id: v('nc-id'), name: v('nc-name'), latitude: v('nc-lat'), longitude: v('nc-lng'), village: v('nc-village'), zone_type: v('nc-zone') };
+    var err = {};                                              // same rules as the server, so mistakes show before sending
+    if (!body.camera_id) err.camera_id = 'Camera ID is required.';
+    else if (!/^[A-Za-z0-9_-]{1,16}$/.test(body.camera_id)) err.camera_id = 'Use 1-16 letters, digits, - or _ only.';
+    var lat = Number(body.latitude), lng = Number(body.longitude);
+    if (body.latitude === '' || isNaN(lat) || lat < -90 || lat > 90) err.latitude = 'Latitude must be a number from -90 to 90.';
+    if (body.longitude === '' || isNaN(lng) || lng < -180 || lng > 180) err.longitude = 'Longitude must be a number from -180 to 180.';
+    if (!body.village) err.village = 'Village is required.';
+    if (!body.zone_type) err.zone_type = 'Choose a zone type from the list.';
+    if (Object.keys(err).length) { this.setState({ camErr: err, camMsg: 'Fix the highlighted fields.', camOk: false }); return; }
+    body.latitude = lat; body.longitude = lng;
+    this.setState({ saving: true, camErr: {}, camMsg: '' });
+    WW.api('/api/cameras', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) {
+      ['nc-id', 'nc-name', 'nc-lat', 'nc-lng', 'nc-village', 'nc-zone'].forEach(function (id) { var e = document.getElementById(id); if (e) e.value = ''; });
+      self.setState({ saving: false, camErr: {}, camOk: true, camMsg: 'Camera ' + r.camera.id + ' added. It now appears in the Upload page list.' });
+      WW.refresh(self, 'cameras'); WW.refresh(self, 'analytics');
+    }).catch(function (e) {
+      self.setState({ saving: false, camErr: (e.body && e.body.fields) || {}, camOk: false, camMsg: e.message || 'Could not add the camera.' });
+    });
+  }
+  toggleCamera(c) {
+    var self = this;
+    WW.api('/api/cameras/' + encodeURIComponent(c.id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !c.active }) })
+      .then(function () { WW.refresh(self, 'cameras'); })
+      .catch(function (e) { self.setState({ camOk: false, camMsg: e.message }); });
+  }
   renderVals() {
     var self = this;
     var st = this.state || { range: '14d', data: {} };
@@ -289,7 +413,7 @@ class Component extends DCLogic {
     var ranges = ['24h', '14d', '30d'].map(function (k) {
       var on = k === st.range;
       return { label: k, pressed: on ? 'true' : 'false', bg: on ? '#F2A93B' : 'transparent', fg: on ? '#1E1405' : '#C9D6CF',
-        pick: function () { self.setState({ range: k }); WW.refresh(self, 'analytics'); } };
+        pick: function () { self.setState({ range: k }); WW.refresh(self, 'analytics'); WW.refresh(self, 'tracks'); } };
     });
     var ok = AN && AN.range === st.range;
     var T = ok ? AN.totals : null;
@@ -319,10 +443,35 @@ class Component extends DCLogic {
         emptyW: c.empty_share == null ? '0%' : c.empty_share + '%', top: c.top ? WW.cap(c.top) : '—', risk: r === 'NONE' ? 'None' : r, bg: R[r][0], fg: R[r][1] };
     });
     var ep = T && T.empty_pct != null ? T.empty_pct : 0;
+    var CR = (st.data || {}).cameras;
+    var keys = ['camera_id', 'name', 'latitude', 'longitude', 'village', 'zone_type'], camForm = { msg: st.camMsg || ' ', msgColor: st.camOk ? '#5FD39A' : '#FFB4A8' };
+    keys.forEach(function (k) { var e = (st.camErr || {})[k]; camForm[k + 'Bad'] = !!e; camForm[k + 'Err'] = e || ''; camForm[k + 'Border'] = e ? '#FF6B5B' : '#2E453C'; });
+    var zoneOptions = CR ? CR.zone_types.map(function (z) { return { id: z.id, label: WW.cap(z.id.replace(/_/g, ' ')) + ' · risk ×' + z.factor }; }) : [];
+    var reg = CR ? CR.cameras.map(function (c) {
+      return { id: c.id, name: c.name, village: c.village, zone: WW.cap((c.zone_type || '').replace(/_/g, ' ')) + ' ×' + c.zone,
+        coords: c.latitude == null ? 'none (old layout)' : c.latitude.toFixed(4) + ', ' + c.longitude.toFixed(4),
+        op: c.active ? '1' : '0.55', fg: c.active ? '#E8EFEA' : '#F2A93B', toggleLabel: c.active ? 'Deactivate' : 'Activate',
+        toggleTitle: c.active ? 'Stops new uploads for this camera. Its images and alerts are kept.' : 'Allow uploads again',
+        toggle: function () { self.toggleCamera(c); } };
+    }) : [];
+    var TRK = (st.data || {}).tracks;
+    var trackOk = TRK && TRK.range === st.range;
+    var tracks = trackOk ? TRK.tracks.map(function (tr) {
+      var r = R[tr.level] || R.NONE;
+      var meta = tr.cameras + ' cameras · ' + (tr.minutes < 60 ? tr.minutes + ' min' : Math.round(tr.minutes / 6) / 10 + ' h') +
+        (tr.distance_km != null ? ' · ' + tr.distance_km + ' km' : ' · distance unknown (camera without coordinates)') + ' · ' + tr.start.slice(5, 16).replace('T', ' ');
+      return { species: WW.cap(tr.species), route: tr.route, meta: meta, level: tr.level, bg: r[0], fg: r[1],
+        stops: tr.stops.map(function (s) { return { text: s.first.slice(11, 16) + ' Cam ' + s.camera + ' · ' + s.village + (s.count > 1 ? ' · ' + s.count : '') }; }) };
+    }) : [];
+    var nAct = CR ? CR.cameras.filter(function (c) { return c.active; }).length : 0;
     return Object.assign(WW.shell(st), { treesFar: treesFar, treesNear: treesNear, flies: flies, ranges: ranges,
       rangeLabel: ok ? AN.label + (T.sightings ? '' : ' · no sightings yet') : 'Loading…', xTicks: ok ? AN.ticks : ['', '', '', '', ''],
       lineNight: toLine(night), lineDay: toLine(day), areaNight: toArea(night), areaDay: toArea(day),
-      species: species, heat: heat, cams: cams,
+      species: species, heat: heat, cams: cams, tracks: tracks, noTracks: trackOk && !tracks.length,
+      trackNote: TRK ? 'Same species at 2+ cameras, each within ' + TRK.gap_minutes + ' min · a species trail, not one identified animal' : 'Loading…',
+      camForm: camForm, zoneOptions: zoneOptions, reg: reg,
+      addCamera: function () { self.addCamera(); }, addLabel: st.saving ? 'Saving…' : 'Add camera',
+      regNote: CR ? nAct + ' active of ' + CR.cameras.length + ' · cameras with images can be deactivated, never deleted' : 'Loading…',
       tImages: T ? WW.fmt(T.images) : '—', tAnimal: T ? WW.fmt(T.with_animals) : '—', tEmpty: T ? WW.fmt(T.empty) : '—',
       tBursts: T ? WW.fmt(T.bursts) : '—', tNight: T ? (T.night_share == null ? 'No sightings' : T.night_share + '%') : '—',
       tNightNote: T ? 'Of ' + WW.fmt(T.sightings) + ' animals counted' : ' ',

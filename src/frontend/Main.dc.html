@@ -15,6 +15,8 @@
 body{margin:0;background:#07110D}
 a{color:#F2A93B}a:hover{color:#FFC56B}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,107,91,.6)}70%{box-shadow:0 0 0 14px rgba(255,107,91,0)}100%{box-shadow:0 0 0 0 rgba(255,107,91,0)}}
+@keyframes dash{to{stroke-dashoffset:-12}}
+.trackline{stroke-dasharray:4 3;animation:dash 1.2s linear infinite}
 @keyframes live{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes fade{from{opacity:0}to{opacity:1}}
@@ -196,7 +198,7 @@ main section:hover{border-color:#3A564B}
 <section aria-label="Camera map" style="flex: 1 1 380px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
 <div style="display: flex; justify-content: space-between; align-items: center">
 <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600">Cameras and villages</h2>
-<span style="font-size: 12px; color: #9DB0A6">Fictional layout</span>
+<span style="font-size: 12px; color: #9DB0A6">{{layoutLabel}}</span>
 </div>
 <div style="position: relative; height: 260px; border-radius: 10px; background: #13221C; border: 1px solid #22342D; overflow: hidden">
 <div style="position: absolute; left: 0; top: 0; width: 46%; height: 100%; background: #173126"></div>
@@ -207,6 +209,9 @@ main section:hover{border-color:#3A564B}
 </div>
 <div aria-hidden="true" style="position: absolute; left: 50%; top: 50%; width: 180px; height: 180px; margin: -90px 0 0 -90px; border-radius: 50%; border: 1px dashed rgba(95,211,154,0.25)"></div>
 <div aria-hidden="true" style="position: absolute; left: 50%; top: 50%; width: 360px; height: 360px; margin: -180px 0 0 -180px; border-radius: 50%; border: 1px dashed rgba(95,211,154,0.18)"></div>
+<svg aria-label="Movement tracks" viewBox="0 0 100 100" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none">
+<sc-for list="{{trackLines}}" as="tl" hint-placeholder-count="0"><polyline class="trackline" ww-points="{{tl.points}}" fill="none" stroke="{{tl.color}}" stroke-width="0.9" vector-effect="non-scaling-stroke" style="stroke-width: 2.5px"></polyline></sc-for>
+</svg>
 <sc-for list="{{villages}}" as="v" hint-placeholder-count="3">
 <div style="position: absolute; left: {{v.x}}; top: {{v.y}}; display: flex; align-items: center; gap: 6px">
 <span style="width: 12px; height: 12px; border-radius: 3px; background: #C9D6CF"></span>
@@ -224,6 +229,7 @@ main section:hover{border-color:#3A564B}
 <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 5px; background: #FF6B5B"></span>Active alert</span>
 <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 5px; background: #F2A93B"></span>Animal seen today</span>
 <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 5px; background: #4E6B5F"></span>Quiet</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 0; border-top: 2px dashed #B9A3FF"></span>{{trackLegend}}</span>
 </div>
 </section>
 </div>
@@ -337,7 +343,7 @@ class Component extends DCLogic {
       summary: { url: '/api/summary', every: 10000 }, alerts: { url: '/api/alerts', every: 10000 },
       ticker: { url: '/api/ticker', every: 10000 }, cameras: { url: '/api/cameras', every: 10000 },
       analytics: { url: '/api/analytics?range=30d', every: 30000 }, accuracy: { url: '/api/accuracy' },
-      rare: { url: '/api/rare', every: 30000 }
+      rare: { url: '/api/rare', every: 30000 }, tracks: { url: '/api/tracks?range=14d', every: 15000 }
     });
   }
   componentWillUnmount() { clearInterval(this.timer); WW.stop(this); }
@@ -404,8 +410,14 @@ class Component extends DCLogic {
       }) };
     });
     var COL = { alert: '#FF6B5B', seen: '#F2A93B', quiet: '#4E6B5F' };
-    var cams = CM ? CM.cameras.map(function (c) { return { id: c.id, x: c.x, y: c.y, color: COL[c.state], anim: c.state === 'alert' ? 'blink' : '' }; }) : [];
+    var cams = CM ? CM.cameras.filter(function (c) { return c.active; }).map(function (c) { return { id: c.id, x: c.x, y: c.y, color: COL[c.state], anim: c.state === 'alert' ? 'blink' : '' }; }) : [];
     var villages = CM ? CM.villages : [];
+    var TR = D.tracks, TC = ['#B9A3FF', '#FF6B5B', '#F2A93B'];
+    var trackLines = TR ? TR.tracks.slice(0, 3).map(function (tr, i) {
+      return { color: TC[i % 3], points: tr.stops.map(function (s) { return parseFloat(s.x) + ',' + parseFloat(s.y); }).join(' ') };
+    }) : [];
+    var trackLegend = !TR ? 'Movement tracks' : TR.tracks.length ? 'Movement: ' + TR.tracks.slice(0, 3).map(function (tr) { return WW.cap(tr.species) + ' ' + tr.route; }).join(' · ') : 'No movement across cameras yet';
+    var layoutLabel = !CM ? ' ' : CM.layout === 'real' ? 'Real GPS positions, scaled to fit' : 'Fictional layout';
 
     var EN = { sbg: '#FF6B5B', sfg: '#2A0D09' }, VU = { sbg: '#F2A93B', sfg: '#1E1405' };
     var rare = RA ? RA.species.map(function (r) {
@@ -417,7 +429,7 @@ class Component extends DCLogic {
     var ms = S && S.avg_detector_ms != null ? Math.round(S.avg_detector_ms + (S.avg_classifier_ms || 0)) : null;
     var dn = AC && AC.day_night && AC.day_night.species_accuracy;
     return Object.assign(WW.shell(st), { treesFar: treesFar, treesNear: treesNear, flies: flies, ticker: ticker, alerts: alerts, species: species, heat: heat,
-      villages: villages, cams: cams, rare: rare, topA: topA, hasTop: !!best, noTop: !!AL && !best,
+      villages: villages, cams: cams, layoutLabel: layoutLabel, trackLines: trackLines, trackLegend: trackLegend, rare: rare, topA: topA, hasTop: !!best, noTop: !!AL && !best,
       quietText: S && S.images_processed === 0 ? 'No photos processed yet. Upload one or drop files into data/incoming/.' : 'No active alerts. All clear.',
       dispatchTop: function () { if (best) self.act(best.id, 'dispatched'); },
       falseTop: function () { if (best) self.act(best.id, 'false_alarm'); },

@@ -126,7 +126,7 @@ nav a:hover{background:#1A2B25;color:#E8EFEA;padding-left:18px}
 <section class="rise" aria-label="Alert detail" style="flex: 1 1 420px; min-width: 0; background: rgba(20,38,31,0.7); backdrop-filter: blur(10px); border: 1px solid #24392F; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
 <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
 <div style="display: flex; flex-direction: column; gap: 4px">
-<span style="font-size: 12px; color: #9DB0A6">Cam {{sel.cam}} · {{sel.village}} · {{sel.time}} · {{sel.light}}</span>
+<span style="font-size: 12px; color: #9DB0A6">Cam {{sel.cam}} · {{sel.camName}} · {{sel.village}} · {{sel.coords}} · {{sel.time}} · {{sel.light}}</span>
 <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600">{{sel.title}}</h2>
 </div>
 <span class="{{sel.pulseCls}}" style="font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 8px; background: {{sel.bg}}; color: {{sel.fg}}">{{sel.levelLabel}}</span>
@@ -233,7 +233,8 @@ class Component extends DCLogic {
     var all = raw.map(function (a) {
       var c = WW.LV[a.level_label] || WW.LV.LOW;
       var title = a.title + (a.review ? ' (faint, needs check)' : '');
-      return Object.assign({}, a, c, { levelLabel: a.level_label, cam: a.camera, scoreText: a.score.toFixed(2), nightF: a.night_factor.toFixed(1),
+      return Object.assign({}, a, c, { levelLabel: a.level_label, cam: a.camera, camName: a.camera_name || 'Unknown camera',
+        coords: a.camera_lat == null ? 'no coordinates' : a.camera_lat.toFixed(4) + ', ' + a.camera_lng.toFixed(4), scoreText: a.score.toFixed(2), nightF: a.night_factor.toFixed(1),
         light: WW.light(a), title: title, statusText: STATUS[a.status], statusColor: SCOL[a.status],
         scoreW: Math.min(100, Math.round(a.score / scaleMax * 100)) + '%', msgSource: a.message_source === 'llm' ? 'written by LLM' : 'template text, no LLM key set' });
     });
@@ -265,7 +266,7 @@ class Component extends DCLogic {
       sel = Object.assign({}, sel0, { pulseCls: sel0.status === 'new' && (sel0.level === 'HIGH' || sel0.level === 'CRITICAL') ? 'pulse' : '',
         hasImage: true, noImage: false, imageUrl: sel0.image_url, boxes: boxes, aspect: ar.toFixed(4), frameWidth: 'min(100%, ' + Math.round(220 * ar) + 'px)' });
     } else {
-      sel = { cam: '—', village: '—', time: '—', light: '—', title: D.alerts ? 'No alerts yet' : 'Loading…', levelLabel: '—', bg: '#24392F', fg: '#C9D6CF',
+      sel = { cam: '—', camName: '—', coords: '—', village: '—', time: '—', light: '—', title: D.alerts ? 'No alerts yet' : 'Loading…', levelLabel: '—', bg: '#24392F', fg: '#C9D6CF',
         pulseCls: '', species: '—', weight: '—', count: '—', nightF: '—', zone: '—', scoreText: '—', scoreW: '0%', response: '—',
         msg: 'Upload a photo or drop files into data/incoming/ and alerts will appear here.', message: '', msgSource: '—',
         statusText: '', statusColor: '#9DB0A6', hasImage: false, noImage: true, imageNote: 'No frame yet', boxes: [] };

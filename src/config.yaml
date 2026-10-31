@@ -26,6 +26,13 @@ pipeline:
 watcher:
   enabled: true
   interval_seconds: 2
+  # Cameras can save into their own folder: data/incoming/cam46/IMG_0001.jpg (or data/incoming/46/...).
+  # The folder name sets the camera; files straight in data/incoming/ need a CAM46_ style name.
+
+# Movement tracks: sightings of the SAME SPECIES at DIFFERENT cameras, each within this many minutes of the
+# previous one, are joined into one track. This is a species-level trail, not re-identification of one animal.
+tracks:
+  gap_minutes: 60
 
 llm:
   # Set FEATHERLESS_API_KEY in the environment to get LLM-written alert messages.
@@ -65,13 +72,26 @@ risk:
     bird: 0.03
 
 # Fictional layout for the camera map (positions are % of the map box).
+# Camera registry seed: copied ONCE into the cameras table of the database (schema v3) when it is empty.
+# After that, add / edit / deactivate cameras on the Analytics page; this list is not read again.
+# x / y are the old fictional map positions, used only for cameras without real coordinates.
 cameras:
-  - {id: "46",  name: "Rampur edge",     village: "Rampur",        zone: 1.0, x: "50%", y: "28%"}
-  - {id: "61",  name: "Hillside",        village: "Hillside",      zone: 1.3, x: "34%", y: "18%"}
-  - {id: "120", name: "Kondapur farms",  village: "Kondapur",      zone: 1.2, x: "52%", y: "74%"}
-  - {id: "38",  name: "Deep reserve",    village: "Deep reserve",  zone: 0.8, x: "18%", y: "40%"}
-  - {id: "7",   name: "Reserve trail",   village: "Reserve trail", zone: 0.5, x: "30%", y: "68%"}
-  - {id: "90",  name: "Hillside ridge",  village: "Hillside",      zone: 1.5, x: "10%", y: "78%"}
+  - {id: "46",  name: "Rampur edge",     village: "Rampur",        zone_type: forest_edge,    x: "50%", y: "28%"}
+  - {id: "61",  name: "Hillside",        village: "Hillside",      zone_type: village_fringe, x: "34%", y: "18%"}
+  - {id: "120", name: "Kondapur farms",  village: "Kondapur",      zone_type: farmland,       x: "52%", y: "74%"}
+  - {id: "38",  name: "Deep reserve",    village: "Deep reserve",  zone_type: deep_forest,    x: "18%", y: "40%"}
+  - {id: "7",   name: "Reserve trail",   village: "Reserve trail", zone_type: core_reserve,   x: "30%", y: "68%"}
+  - {id: "90",  name: "Hillside ridge",  village: "Hillside",      zone_type: village,        x: "10%", y: "78%"}
+
+# Zone type -> risk multiplier. THESE NUMBERS ARE OUR TEAM'S CHOICES, not learned from data. Edit freely;
+# every camera of that type picks up the new factor the next time the server starts.
+zone_types:
+  core_reserve: 0.5
+  deep_forest: 0.8
+  forest_edge: 1.0
+  farmland: 1.2
+  village_fringe: 1.3
+  village: 1.5
 villages:
   - {name: "Rampur",   x: "72%", y: "24%"}
   - {name: "Kondapur", x: "64%", y: "70%"}

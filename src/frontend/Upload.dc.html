@@ -110,13 +110,24 @@ nav a:hover{background:#1A2B25;color:#E8EFEA;padding-left:18px}
 <span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600">{{dropTitle}}</span>
 <span style="font-size: 14px; color: #B9C8C0">or click to choose files · JPG or PNG · many at once</span>
 </label>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+<label class="folderbtn" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #2E453C; background: #13221C; color: #E8EFEA; font: 500 14px Inter, sans-serif; cursor: pointer">
+<input type="file" id="folder" webkitdirectory multiple onChange="{{onFiles}}" style="position: absolute; width: 1px; height: 1px; opacity: 0">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F2A93B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6l2 2h10v10H3z"></path></svg>
+Upload a whole folder
+</label>
+<span style="font-size: 13px; color: #9DB0A6">Subfolders named after cameras (cam46/, cam52/…) set each photo's camera.</span>
+<sc-if value="{{hasProgress}}"><span role="status" style="font-size: 13px; color: #5FD39A; font-family: 'JetBrains Mono', monospace">{{progress}}</span></sc-if>
+</div>
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px">
 <div style="display: flex; flex-direction: column; gap: 6px">
 <label for="cam" style="font-size: 13px; color: #B9C8C0">Camera</label>
-<select id="cam" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid #2E453C; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<select id="cam" aria-describedby="cam-error" onChange="{{clearCamErr}}" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid #2E453C; background: #13221C; color: #E8EFEA; font: 14px Inter, sans-serif">
+<option value="">Choose a camera…</option>
 <sc-for list="{{camOptions}}" as="o" hint-placeholder-count="6"><option value="{{o.id}}">{{o.label}}</option></sc-for>
 </select>
+<sc-if value="{{hasCamError}}"><span role="status" id="cam-error" style="font-size: 12px; color: #FFB4A8">{{camError}}</span></sc-if>
 </div>
 <div style="display: flex; flex-direction: column; gap: 6px">
 <label for="when" style="font-size: 13px; color: #B9C8C0">Capture time</label>
@@ -130,7 +141,7 @@ Use the time stored in the photo when it has one
 
 <div style="display: flex; gap: 12px; align-items: flex-start; background: #13221C; border: 1px solid #24392F; border-radius: 10px; padding: 12px 14px">
 <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8FBFA6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px"><path d="M3 7h6l2 2h10v10H3z"></path></svg>
-<span style="font-size: 13px; line-height: 1.5; color: #B9C8C0">Cameras can also save straight into the <span style="font-family: 'JetBrains Mono', monospace; color: #E8EFEA">data/incoming/</span> folder. WildWatch picks new files up on its own.</span>
+<span style="font-size: 13px; line-height: 1.5; color: #B9C8C0">Cameras can save straight into their own folder, <span style="font-family: 'JetBrains Mono', monospace; color: #E8EFEA">data/incoming/cam46/</span>. WildWatch picks each new photo up within seconds, no clicking needed.</span>
 </div>
 </section>
 
@@ -196,7 +207,7 @@ class Component extends DCLogic {
   }
   componentDidMount() {
     var self = this;
-    WW.load(this, { summary: { url: '/api/summary', every: 10000 }, cameras: { url: '/api/cameras' }, jobs: { url: '/api/jobs?limit=20', every: 10000 } });
+    WW.load(this, { summary: { url: '/api/summary', every: 10000 }, cameras: { url: '/api/cameras?active=1', every: 30000 }, jobs: { url: '/api/jobs?limit=20', every: 10000 } });
     this.fast = setInterval(function () {                    // 1 s polling of every running job
       var list = ((self.state.data || {}).jobs || {}).jobs || [];
       list.filter(function (j) { return j.state === 'queued' || j.state === 'running'; }).forEach(function (j) {
@@ -215,32 +226,64 @@ class Component extends DCLogic {
   send(files) {
     var self = this;
     if (!files || !files.length) { this.setState({ dragging: false }); return; }
-    var fd = new FormData();
-    var urls = [];
-    for (var i = 0; i < files.length; i++) { fd.append('files', files[i]); urls.push({ name: files[i].name, url: URL.createObjectURL(files[i]) }); }
     var cam = document.getElementById('cam'), when = document.getElementById('when'), ex = document.getElementById('exif');
-    fd.append('camera_id', cam ? cam.value : '');
-    fd.append('capture_time', when ? when.value : '');
-    fd.append('use_exif', ex && ex.checked ? 'true' : 'false');
-    this.setState({ dragging: false, busy: true });
+    var known = ((this.state.data || {}).cameras || { cameras: [] }).cameras.map(function (c) { return c.id; });
+    function fromFolder(f) {                                     // folder upload: .../cam46/IMG_001.jpg -> 46
+      var parts = (f.webkitRelativePath || '').split('/');
+      for (var i = parts.length - 2; i >= 0; i--) {
+        var m = /^(?:cam[_\- ]?)?([A-Za-z0-9_-]{1,16})$/i.exec(parts[i]);
+        if (m && known.indexOf(m[1]) >= 0) return m[1];
+      }
+      return '';
+    }
+    function fromName(f) { var m = /cam[_\-\s]?(\d+)/i.exec(f.name || ''); return m && known.indexOf(m[1]) >= 0 ? m[1] : ''; }
+    var groups = {}, order = [], noCam = [], picked = cam ? cam.value : '';
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (!/\.(jpe?g|png|webp|bmp)$/i.test(f.name || '') && f.webkitRelativePath) continue;   // skip non-photos inside folders
+      var c = fromFolder(f) || fromName(f) || picked;
+      if (!c) { noCam.push(f); continue; }
+      if (!groups[c]) { groups[c] = []; order.push(c); }
+      groups[c].push(f);
+    }
+    if (cam && !cam.value && order.length === 1) cam.value = order[0];      // CAM46_ style name: show it in the list
+    if (!order.length) { this.setState({ dragging: false, camError: 'Choose a camera first. Each photo must come from a registered camera.' }); return; }
+    var batches = [];
+    order.forEach(function (c) { for (var k = 0; k < groups[c].length; k += 20) batches.push({ cam: c, files: groups[c].slice(k, k + 20) }); });
+    var total = batches.reduce(function (n, x) { return n + x.files.length; }, 0);
+    this.setState({ dragging: false, busy: true, camError: noCam.length ? noCam.length + ' photo(s) skipped: no camera for them. Choose one in the list.' : '',
+      progress: '0 of ' + total + ' sent' });
     function addErrors(list) {
       self.setState(function (st) {
         var add = list.map(function (r) { return { id: 'e' + (self.errId++), filename: r.filename || 'Upload', error: r.error }; });
-        return { localErrors: add.concat(st.localErrors).slice(0, 5), busy: false };
+        return { localErrors: add.concat(st.localErrors).slice(0, 5) };
       });
     }
-    WW.api('/api/upload', { method: 'POST', body: fd }).then(function (r) {
-      self.setState(function (st) {
-        var th = Object.assign({}, st.thumbs);
-        r.jobs.forEach(function (j) { var u = urls.filter(function (x) { return x.name === j.filename; })[0]; if (u) th[j.id] = u.url; });
-        return { thumbs: th, busy: false };
+    var sent = 0;
+    function next(i) {
+      if (i >= batches.length) { self.setState({ busy: false, progress: total > 1 ? total + ' photos sent' : '' }); WW.refresh(self, 'jobs'); return; }
+      var bt = batches[i], fd = new FormData(), urls = [];
+      bt.files.forEach(function (f) { fd.append('files', f); urls.push({ name: f.name, url: URL.createObjectURL(f) }); });
+      fd.append('camera_id', bt.cam);
+      fd.append('capture_time', when ? when.value : '');
+      fd.append('use_exif', ex && ex.checked ? 'true' : 'false');
+      WW.api('/api/upload', { method: 'POST', body: fd }).then(function (r) {
+        self.setState(function (st) {
+          var th = Object.assign({}, st.thumbs);
+          r.jobs.forEach(function (j) { var u = urls.filter(function (x) { return x.name === j.filename; })[0]; if (u) th[j.id] = u.url; });
+          return { thumbs: th };
+        });
+        if (r.rejected && r.rejected.length) addErrors(r.rejected);
+      }).catch(function (e) {
+        addErrors(e.body && e.body.rejected && e.body.rejected.length ? e.body.rejected : [{ filename: 'Upload', error: e.message }]);
+      }).then(function () {
+        sent += bt.files.length;
+        self.setState({ progress: sent + ' of ' + total + ' sent' });
+        WW.refresh(self, 'jobs');
+        next(i + 1);
       });
-      if (r.rejected && r.rejected.length) addErrors(r.rejected);
-      WW.refresh(self, 'jobs');
-    }).catch(function (e) {
-      var rej = e.body && e.body.rejected && e.body.rejected.length ? e.body.rejected : [{ filename: 'Upload', error: e.message }];
-      addErrors(rej);
-    });
+    }
+    next(0);
   }
   renderVals() {
     var self = this;
@@ -304,11 +347,14 @@ class Component extends DCLogic {
     });
     var doneCount = items.filter(function (x) { return x.done; }).length;
     var cams = D.cameras ? D.cameras.cameras : [];
-    var camOptions = cams.map(function (c) { return { id: c.id, label: 'Cam ' + c.id + ' · ' + c.name }; });
+    var ZN = function (z) { return z ? z.replace(/_/g, ' ') : 'no zone'; };
+    var camOptions = cams.map(function (c) { return { id: c.id, label: 'Cam ' + c.id + ' · ' + c.name + ' — ' + c.village + ' · ' + ZN(c.zone_type) + ' ×' + c.zone }; });
     return Object.assign(WW.shell(st), { treesFar: treesFar, treesNear: treesNear, flies: flies, items: items, noItems: items.length === 0 && !!D.jobs,
+      camError: st.camError || '', hasCamError: !!st.camError, progress: st.progress || '', hasProgress: !!st.progress,
       queueLabel: items.length ? doneCount + ' of ' + items.length + ' done' : (D.jobs ? 'Empty' : 'Loading…'), camOptions: camOptions,
       dropBg: st.dragging ? 'rgba(242,169,59,0.12)' : 'rgba(11,22,18,0.6)',
       dropTitle: st.dragging ? 'Let go to upload' : st.busy ? 'Uploading…' : 'Drop camera photos here',
+      clearCamErr: function () { if (self.state.camError) self.setState({ camError: '' }); },
       onFiles: function (e) { self.send(e.target.files || []); e.target.value = ''; },
       over: function (e) { e.preventDefault(); if (!self.state.dragging) self.setState({ dragging: true }); },
       leave: function () { self.setState({ dragging: false }); },

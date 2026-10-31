@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, UnidentifiedImageError
@@ -123,6 +123,20 @@ def check_image(data: bytes, cfg):
     return None, w, h, exif_time
 
 
+def camera_from_folder(name):
+    """data/incoming/cam46/... or data/incoming/46/... -> '46'."""
+    m = re.fullmatch(r"(?:cam[_\-\s]?)?([A-Za-z0-9_-]{1,16})", name.strip(), re.I)
+    return m.group(1) if m else ""
+
+
+def km_between(a, b):
+    """Great-circle distance in km between two (lat, lng) points."""
+    import math
+    la1, lo1, la2, lo2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 6371.0 * 2 * math.asin(math.sqrt(h))
+
+
 def parse_camera(filename):
     m = re.search(r"cam[_\-\s]?(\d+)", filename, re.I)
     return m.group(1) if m else ""
@@ -218,11 +232,12 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
     for k in ("incoming", "reports"):
         os.makedirs(cfg["paths"][k], exist_ok=True)
     os.makedirs(os.path.dirname(cfg["paths"]["db"]), exist_ok=True)
-    db = DB(cfg["paths"]["db"])
+    db = DB(cfg["paths"]["db"], seed_cameras=cfg.get("cameras", []), zone_types=cfg.get("zone_types", {}))
     if pipeline is None:
         from pipeline import RealPipeline
         pipeline = RealPipeline(cfg)
-    cams = {c["id"]: c for c in cfg["cameras"]}
+    legacy_xy = {str(c["id"]): c for c in cfg.get("cameras", [])}      # old fictional map positions only
+    zone_types = cfg.get("zone_types", {})
     app = FastAPI(title="WildWatch", docs_url=None, redoc_url=None, openapi_url=None)
     pl = cfg["pipeline"]
     max_files, max_queue = int(pl.get("max_files_per_request", 20)), int(pl.get("max_queue", 200))
@@ -235,8 +250,13 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
     app.state.pipeline_error = None
 
     def cam_info(cid):
-        c = cams.get(cid)
-        return c or {"id": cid or "?", "name": "Unknown camera", "village": "Unknown", "zone": 1.0}
+        """Camera details from the cameras table (schema v3). Risk uses zone_factor and village from here."""
+        r = db.one("SELECT * FROM cameras WHERE camera_id=?", (cid,)) if cid else None
+        if not r:
+            return {"id": cid or "?", "name": "Unknown camera", "village": "Unknown", "zone": 1.0, "zone_type": None,
+                    "latitude": None, "longitude": None, "active": False, "known": False}
+        return {"id": r["camera_id"], "name": r["name"], "village": r["village"], "zone": r["zone_factor"], "zone_type": r["zone_type"],
+                "latitude": r["latitude"], "longitude": r["longitude"], "active": bool(r["active"]), "known": True}
 
     # ---------------------------------------------------------------------------- job processing
     def set_job(jid, **kw):
@@ -320,7 +340,8 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
         seen = {}
         while not stop.is_set():
             try:
-                for p in Path(cfg["paths"]["incoming"]).iterdir():
+                root = Path(cfg["paths"]["incoming"])
+                for p in list(root.iterdir()) + [q for d in root.iterdir() if d.is_dir() for q in d.iterdir()]:
                     if p.suffix.lower() not in IMG_EXT or not p.is_file():
                         continue
                     key = str(p)
@@ -330,7 +351,10 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
                         continue
                     if db.one("SELECT id FROM jobs WHERE path=?", (key,)):
                         continue
-                    jid = new_job(key, p.name[:120], size, "watcher", clean_camera(parse_camera(p.name)))
+                    cid = clean_camera(camera_from_folder(p.parent.name)) if p.parent != root else ""   # folder wins
+                    if cid and not cam_info(cid)["known"]:
+                        cid = ""                                      # folder is not a registered camera: use the name
+                    jid = new_job(key, p.name[:120], size, "watcher", cid or clean_camera(parse_camera(p.name)))
                     jobq.put(jid)
             except Exception:
                 log.exception("watcher error")
@@ -365,6 +389,7 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
         img = db.one("SELECT width,height FROM images WHERE id=?", (r["image_id"],)) or {}
         ci = cam_info(r["camera_id"])
         return {"id": r["id"], "species": r["species"], "count": r["count"], "camera": r["camera_id"], "camera_name": ci["name"],
+                "camera_lat": ci["latitude"], "camera_lng": ci["longitude"], "zone_type": ci["zone_type"],
                 "village": r["village"], "captured_at": r["captured_at"], "time": r["captured_at"][11:16], "night": bool(r["night"]),
                 "weight": r["weight"], "zone": r["zone"], "night_factor": r["night_factor"], "score": r["score"], "level": r["level"],
                 "level_label": level_label(r), "species_label": risk.plural(r["species"], r["count"]), "person": bool(r["person"]), "review": bool(r["review"]),
@@ -410,16 +435,177 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
                 "avg_detector_ms": avg(det_ms), "avg_classifier_ms": avg(cls_ms), "device": dev,
                 "pipeline_error": app.state.pipeline_error}
 
-    @app.get("/api/cameras")
-    def cameras():
+    def camera_payload(active_only=False):
         end = anchor()
         since = (end - timedelta(hours=24)).strftime(TS)
+        rows = db.q("SELECT * FROM cameras " + ("WHERE active=1 " if active_only else "") + "ORDER BY rowid")
+        live = [r for r in rows if r["active"]]
+        real = bool(live) and all(r["latitude"] is not None and r["longitude"] is not None for r in live)
+        geo = [r for r in rows if r["latitude"] is not None and r["longitude"] is not None]
+        if geo:                                              # scale real coordinates into the map box (8% margin)
+            la = [r["latitude"] for r in geo]; lo = [r["longitude"] for r in geo]
+            def pos(lat, lng):
+                fx = 0.5 if max(lo) == min(lo) else (lng - min(lo)) / (max(lo) - min(lo))
+                fy = 0.5 if max(la) == min(la) else (max(la) - lat) / (max(la) - min(la))     # north at the top
+                return f"{8 + 84 * fx:.1f}%", f"{8 + 84 * fy:.1f}%"
         out = []
-        for c in cfg["cameras"]:
-            act = db.one("SELECT COUNT(*) n FROM alerts WHERE camera_id=? AND status='new' AND level!='LOW'", (c["id"],))["n"]
-            seen = db.one("SELECT COUNT(*) n FROM alerts WHERE camera_id=? AND captured_at>=?", (c["id"], since))["n"]
-            out.append({**c, "state": "alert" if act else "seen" if seen else "quiet"})
-        return {"cameras": out, "villages": cfg["villages"]}
+        for r in rows:
+            act = db.one("SELECT COUNT(*) n FROM alerts WHERE camera_id=? AND status='new' AND level!='LOW'", (r["camera_id"],))["n"]
+            seen = db.one("SELECT COUNT(*) n FROM alerts WHERE camera_id=? AND captured_at>=?", (r["camera_id"], since))["n"]
+            n_img = db.one("SELECT COUNT(*) n FROM images WHERE camera_id=?", (r["camera_id"],))["n"]
+            if r["latitude"] is not None and r["longitude"] is not None:
+                x, y = pos(r["latitude"], r["longitude"])
+            else:
+                lg = legacy_xy.get(r["camera_id"], {})
+                x, y = lg.get("x", "50%"), lg.get("y", "50%")
+            out.append({"id": r["camera_id"], "name": r["name"], "village": r["village"], "latitude": r["latitude"],
+                        "longitude": r["longitude"], "zone_type": r["zone_type"], "zone": r["zone_factor"], "active": bool(r["active"]),
+                        "images": n_img, "created_at": r["created_at"], "x": x, "y": y,
+                        "state": "alert" if act else "seen" if seen else "quiet"})
+        if real:                                             # village marker = middle of its cameras
+            vs = {}
+            for c in out:
+                if c["active"]:
+                    vs.setdefault(c["village"], []).append(c)
+            villages = [{"name": v, "x": f"{sum(float(c['x'][:-1]) for c in cs) / len(cs):.1f}%",
+                         "y": f"{sum(float(c['y'][:-1]) for c in cs) / len(cs) + 6:.1f}%"} for v, cs in vs.items()]
+        else:
+            villages = cfg.get("villages", [])
+        return {"cameras": out, "villages": villages, "layout": "real" if real else "fictional",
+                "zone_types": [{"id": k, "factor": v} for k, v in zone_types.items()]}
+
+    @app.get("/api/cameras")
+    def cameras(active: int = 0):
+        return camera_payload(active_only=bool(active))
+
+    def validate_camera(body, new):
+        err = {}
+        cid = str(body.get("camera_id", "")).strip() if new else None
+        if new:
+            if not cid:
+                err["camera_id"] = "Camera ID is required."
+            elif not re.fullmatch(r"[A-Za-z0-9_-]{1,16}", cid):
+                err["camera_id"] = "Use 1-16 letters, digits, - or _ only."
+            elif db.one("SELECT 1 FROM cameras WHERE camera_id=?", (cid,)):
+                err["camera_id"] = f"Camera {cid} already exists."
+        name = str(body.get("name") or "").strip()
+        if len(name) > 60:
+            err["name"] = "Name is too long (max 60 characters)."
+        village = str(body.get("village") or "").strip()
+        if not village:
+            err["village"] = "Village is required."
+        elif len(village) > 60:
+            err["village"] = "Village name is too long (max 60 characters)."
+        coords = {}
+        for k, lo, hi in (("latitude", -90, 90), ("longitude", -180, 180)):
+            v = body.get(k)
+            try:
+                f = float(v)
+                if f != f or not (lo <= f <= hi):
+                    raise ValueError
+                coords[k] = f
+            except (TypeError, ValueError):
+                err[k] = f"{k.capitalize()} must be a number from {lo} to {hi}."
+        zt = body.get("zone_type")
+        if zt not in zone_types:
+            err["zone_type"] = "Choose a zone type from the list."
+        if err:
+            dup = "camera_id" in err and "already exists" in err["camera_id"]
+            raise HTTPException(409 if dup and len(err) == 1 else 422,
+                                detail={"error": next(iter(err.values())), "fields": err, "rejected": []})
+        return cid, (name or f"Camera {cid}" if new else name), coords["latitude"], coords["longitude"], village, zt
+
+    @app.post("/api/cameras", status_code=201)
+    def add_camera(body: dict = Body(...)):
+        cid, name, lat, lng, village, zt = validate_camera(body, new=True)
+        db.x("INSERT INTO cameras(camera_id,name,latitude,longitude,village,zone_type,zone_factor,active,created_at) VALUES(?,?,?,?,?,?,?,1,?)",
+             (cid, name, lat, lng, village, zt, float(zone_types[zt]), now_s()))
+        return {"camera": next(c for c in camera_payload()["cameras"] if c["id"] == cid)}
+
+    @app.put("/api/cameras/{cid}")
+    def edit_camera(cid: str, body: dict = Body(...)):
+        old = db.one("SELECT * FROM cameras WHERE camera_id=?", (cid,))
+        if not old:
+            raise HTTPException(404, "Camera not found")
+        _, name, lat, lng, village, zt = validate_camera(body, new=False)
+        db.x("UPDATE cameras SET name=?,latitude=?,longitude=?,village=?,zone_type=?,zone_factor=? WHERE camera_id=?",
+             (name or old["name"], lat, lng, village, zt, float(zone_types[zt]), cid))
+        return {"camera": next(c for c in camera_payload()["cameras"] if c["id"] == cid)}
+
+    @app.patch("/api/cameras/{cid}")
+    def set_camera_active(cid: str, body: dict = Body(...)):
+        if not db.one("SELECT 1 FROM cameras WHERE camera_id=?", (cid,)):
+            raise HTTPException(404, "Camera not found")
+        if not isinstance(body.get("active"), bool):
+            raise HTTPException(422, detail={"error": "Send {\"active\": true} or {\"active\": false}.", "fields": {"active": "Must be true or false."}, "rejected": []})
+        db.x("UPDATE cameras SET active=? WHERE camera_id=?", (int(body["active"]), cid))
+        return {"camera": next(c for c in camera_payload()["cameras"] if c["id"] == cid)}
+
+    @app.delete("/api/cameras/{cid}")
+    def delete_camera(cid: str):
+        if not db.one("SELECT 1 FROM cameras WHERE camera_id=?", (cid,)):
+            raise HTTPException(404, "Camera not found")
+        if db.one("SELECT 1 FROM images WHERE camera_id=? UNION SELECT 1 FROM jobs WHERE camera_id=? LIMIT 1", (cid, cid)):
+            raise HTTPException(409, detail={"error": "This camera already has images, so it can only be deactivated, never deleted.", "rejected": []})
+        db.x("DELETE FROM cameras WHERE camera_id=?", (cid,))
+        return {"deleted": cid}
+
+    @app.get("/api/tracks")
+    def tracks(range: Literal["24h", "14d", "30d"] = "14d"):
+        """Species-level movement: the same species seen at 2+ different cameras, each sighting within
+        tracks.gap_minutes of the previous one. Not individual re-identification."""
+        gap = float(cfg.get("tracks", {}).get("gap_minutes", 60)) * 60
+        end = anchor()
+        since = (end - (timedelta(hours=24) if range == "24h" else timedelta(days=int(range[:-1])))).strftime(TS)
+        rows = db.q("SELECT a.id,a.species,a.count,a.camera_id,a.captured_at,a.level,a.person FROM alerts a "
+                    "WHERE a.captured_at>=? AND a.species IS NOT NULL ORDER BY a.captured_at, a.id", (since,))
+        geo = {c["id"]: c for c in camera_payload()["cameras"]}
+        order = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        chains = {}
+        out = []
+        def close(ch):
+            if len({st["camera"] for st in ch}) >= 2:
+                out.append(ch)
+        for r in rows:
+            t = datetime.strptime(r["captured_at"], TS)
+            ch = chains.get(r["species"])
+            if ch and (t - ch[-1]["_last"]).total_seconds() > gap:
+                close(ch); ch = None
+            if not ch:
+                ch = chains[r["species"]] = []
+            if ch and ch[-1]["camera"] == r["camera_id"]:             # same camera again: one stop
+                st = ch[-1]; st["_last"] = t; st["last"] = r["captured_at"]; st["count"] = max(st["count"], r["count"])
+                st["alert_ids"].append(r["id"])
+                if r["level"] in order and order.index(r["level"]) > order.index(st["level"]):
+                    st["level"] = r["level"]
+                continue
+            g = geo.get(r["camera_id"], {})
+            ch.append({"camera": r["camera_id"], "camera_name": g.get("name", "Unknown camera"), "village": g.get("village", "Unknown"),
+                       "latitude": g.get("latitude"), "longitude": g.get("longitude"), "x": g.get("x"), "y": g.get("y"),
+                       "first": r["captured_at"], "last": r["captured_at"], "_last": t, "count": r["count"],
+                       "level": r["level"] if r["level"] in order else "LOW", "alert_ids": [r["id"]]})
+        for ch in chains.values():
+            close(ch)
+        result = []
+        for ch in out:
+            km, legs = 0.0, 0
+            for a_, b_ in zip(ch, ch[1:]):
+                if None not in (a_["latitude"], a_["longitude"], b_["latitude"], b_["longitude"]):
+                    km += km_between((a_["latitude"], a_["longitude"]), (b_["latitude"], b_["longitude"])); legs += 1
+            for st in ch:
+                st.pop("_last", None)
+            start, stop = ch[0]["first"], ch[-1]["last"]
+            mins = (datetime.strptime(stop, TS) - datetime.strptime(start, TS)).total_seconds() / 60
+            sp = ch[0]
+            result.append({"species": rows and next(r["species"] for r in rows if r["id"] == sp["alert_ids"][0]),
+                           "stops": ch, "cameras": len({st["camera"] for st in ch}), "start": start, "end": stop,
+                           "minutes": round(mins), "route": " → ".join("Cam " + st["camera"] for st in ch),
+                           "distance_km": round(km, 2) if legs == len(ch) - 1 else None,
+                           "level": max((st["level"] for st in ch), key=order.index),
+                           "villages": sorted({st["village"] for st in ch})})
+        result.sort(key=lambda t: t["end"], reverse=True)
+        return {"range": range, "gap_minutes": gap / 60, "tracks": result,
+                "note": "Species-level trail across cameras; the system cannot tell whether it is one individual."}
 
     @app.get("/api/alerts")
     def alerts(level: str = Query("ALL")):
@@ -507,7 +693,8 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
         empty = sum(1 for r in imgs if r["outcome"] == "empty")
         cam_rows = []
         since24 = (end - timedelta(hours=24)).strftime(TS)
-        ids = [c["id"] for c in cfg["cameras"]] + sorted({r["camera_id"] for r in imgs if r["camera_id"] not in cams})
+        reg = [c["camera_id"] for c in db.q("SELECT camera_id FROM cameras ORDER BY rowid")]
+        ids = reg + sorted({r["camera_id"] for r in imgs if r["camera_id"] not in reg})
         for cid in ids:
             ci = cam_info(cid)
             ci_imgs = [r for r in imgs if r["camera_id"] == cid]
@@ -518,7 +705,7 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
             recent = db.q("SELECT level,person FROM alerts WHERE camera_id=? AND captured_at>=?", (cid, since24))
             order = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
             rk = max((order.index(r["level"]) for r in recent), default=None)
-            cam_rows.append({"id": cid, "name": ci["name"], "village": f"{ci['name']}" if cid in cams else "Unknown camera",
+            cam_rows.append({"id": cid, "name": ci["name"], "village": ci["village"] if ci["known"] else "Unknown camera",
                              "images": len(ci_imgs), "animals": sum(sp.values()),
                              "empty_share": round(100 * sum(1 for r in ci_imgs if r["outcome"] == "empty") / len(ci_imgs)) if ci_imgs else None,
                              "top": max(sp, key=sp.get) if sp else None, "risk": order[rk] if rk is not None else None})
@@ -594,13 +781,24 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
             if err:
                 rejected.append({"filename": name, "error": err})
                 continue
+            cid = cam_in or clean_camera(parse_camera(name))
+            ci = cam_info(cid)
+            if not cid:
+                rejected.append({"filename": name, "error": "Choose a camera before uploading."})
+                continue
+            if not ci["known"]:
+                rejected.append({"filename": name, "error": f"Camera {cid} is not registered. Add it on the Analytics page first."})
+                continue
+            if not ci["active"]:
+                rejected.append({"filename": name, "error": f"Camera {cid} is deactivated."})
+                continue
             fmt = Image.open(io.BytesIO(data)).format
             safe = re.sub(r"[^A-Za-z0-9_-]", "_", os.path.splitext(name)[0])[:60] or "image"
             final = Path(cfg["paths"]["incoming"]) / f"{uuid.uuid4().hex[:8]}_{safe}{FMT_EXT[fmt]}"
             part = final.with_name(final.name + ".part")
             part.write_bytes(data)
             when = exif_time if (use_exif.lower() != "false" and exif_time) else ct
-            jid = new_job(final, name, len(data), "upload", cam_in or clean_camera(parse_camera(name)), when or "")
+            jid = new_job(final, name, len(data), "upload", cid, when or "")
             os.replace(part, final)                  # job row exists first, so the watcher never double-counts
             jobq.put(jid)
             accepted.append({"filename": name, "job_id": jid})
@@ -649,7 +847,8 @@ def create_app(config_path=None, pipeline=None, overrides=None, start_worker=Tru
     @app.exception_handler(HTTPException)
     async def http_exc(request, exc):
         d = exc.detail
-        return JSONResponse({"error": d["error"], "rejected": d.get("rejected", [])} if isinstance(d, dict) else {"error": str(d)},
+        return JSONResponse({"error": d["error"], "rejected": d.get("rejected", []), **({"fields": d["fields"]} if "fields" in d else {})}
+                            if isinstance(d, dict) else {"error": str(d)},
                             status_code=exc.status_code)
 
     app.mount("/", StaticFiles(directory=cfg["paths"]["frontend"], html=True), name="frontend")
